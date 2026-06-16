@@ -35,6 +35,7 @@ protected:
 	void GiveStartupAbilities();
 	// 初始化属性
 	void InitializeAttributes() const;
+
 private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Abilities")

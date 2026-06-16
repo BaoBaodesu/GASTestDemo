@@ -8,7 +8,6 @@
 #include "T_WidgetComponent.generated.h"
 
 class UAbilitySystemComponent;
-class UAttributeSet;
 class UT_AttributeSet;
 class UT_AbilitySystemComponent;
 class AT_BaseCharacter;

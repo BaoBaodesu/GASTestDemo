@@ -12,12 +12,15 @@
 void UT_WidgetComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	InitAbilitySystemData();
 	
 	if (!IsASCInitialized())
 	{
-		CrashCharacter->OnASCInitialized.AddDynamic(this, &ThisClass::OnASCInitialized);
+		if (CrashCharacter.IsValid())
+		{
+			CrashCharacter->OnASCInitialized.AddDynamic(this, &ThisClass::OnASCInitialized);
+		}
 		return;
 	}
 	
@@ -56,6 +59,7 @@ bool UT_WidgetComponent::IsASCInitialized() const
  */
 void UT_WidgetComponent::InitializeAttributeDelegate()
 {
+	// BindToAttributeChanges();
 	if (!AttributeSet->bAttributesInitialized)
 	{
 		// 等待 AttributeSet 初始化完成
@@ -143,10 +147,9 @@ void UT_WidgetComponent::BindWidgetToAttributeChanges(UWidget* WidgetObject,
 	
 	// 监听当前属性的变化，例如监听 Health 变化
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Pair.Key)
-	.AddLambda([this, AttributeWidget, &Pair](const FOnAttributeChangeData& AttributeChangeData)
+	.AddLambda([this, AttributeWidget, Pair](const FOnAttributeChangeData& AttributeChangeData)
 	{
 		// 属性变化后，重新读取当前值和最大值，并更新 UI
 		AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get());
 	});
 }
-
