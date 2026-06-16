@@ -1,0 +1,26 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "NativeGameplayTags.h"
+
+
+namespace TTags
+{
+	namespace TAbilities
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(ActivateOnGiven);
+		
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Primary);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Secondary);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tertiary);
+	}
+	namespace Events
+	{
+		namespace Enemy
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(HitReact);
+		}
+	}
+}
