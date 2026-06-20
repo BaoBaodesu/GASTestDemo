@@ -8,6 +8,7 @@ namespace TTags
 	namespace TAbilities
 	{
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(ActivateOnGiven, "TTags.TAbilities.ActivateOnGiven", "被赋予能力后会立即激活的标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Death, "TTags.TAbilities.Death", "死亡标签");
 		
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Primary, "TTags.TAbilities.Primary", "主要能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.TAbilities.Secondary", "次要能力标签");
@@ -15,6 +16,7 @@ namespace TTags
 	}
 	namespace Events
 	{
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(KillScored, "TTags.Events.KillScored", "击杀得分的事件")
 		namespace Enemy
 		{
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(HitReact, "TTags.Events.Enemy.HitReact", "敌人受击反应事件")

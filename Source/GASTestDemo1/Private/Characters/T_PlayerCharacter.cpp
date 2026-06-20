@@ -41,6 +41,8 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>("FollowCamera");
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+	
+	Tags.Add(CrashTags::Player);
 }
 
 UAbilitySystemComponent* AT_PlayerCharacter::GetAbilitySystemComponent() const
@@ -72,6 +74,10 @@ void AT_PlayerCharacter::PossessedBy(AController* NewController)
 	
 	OnASCInitialized.Broadcast(GetAbilitySystemComponent(), GetAttributeSet());
 	
+	UT_AttributeSet* T_AttributeSet = Cast<UT_AttributeSet>(GetAttributeSet());
+	if (!IsValid(T_AttributeSet)) return;
+	
+	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
 }
 
 void AT_PlayerCharacter::OnRep_PlayerState()
@@ -83,6 +89,10 @@ void AT_PlayerCharacter::OnRep_PlayerState()
 	GetAbilitySystemComponent()->InitAbilityActorInfo(GetPlayerState(), this);
 	OnASCInitialized.Broadcast(GetAbilitySystemComponent(), GetAttributeSet());
 	
+	UT_AttributeSet* T_AttributeSet = Cast<UT_AttributeSet>(GetAttributeSet());
+	if (!IsValid(T_AttributeSet)) return;
+	
+	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
 }
 
 
