@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
+#include "Runtime/AIModule/Classes/AIController.h"
 
 
 AT_EnemyCharacter::AT_EnemyCharacter()
@@ -47,4 +48,13 @@ void AT_EnemyCharacter::BeginPlay()
 	if (!IsValid(T_AttributeSet)) return;
 	
 	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
+}
+
+void AT_EnemyCharacter::HandleDeath()
+{
+	Super::HandleDeath();
+	
+	AAIController* AIController = GetController<AAIController>();
+	if (!IsValid(AIController)) return;
+	AIController->StopMovement();
 }

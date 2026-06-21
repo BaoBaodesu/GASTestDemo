@@ -46,18 +46,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Crash|Attributes")
 	void ResetAttributes();
-	
-	// 移动半径范围
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crash|AI")
-	float AcceptanceRadius{500.0f};
 
-	// 最短攻击间隔
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crash|AI")
-	float MinAttackDelay{0.1f};
+	UFUNCTION(BlueprintImplementableEvent)
+	void RotateToTarget(AActor* RotateTarget);
 
-	// 最长攻击间隔
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crash|AI")
-	float MaxAttackDelay{0.5f};
 protected:
 	// 初始能力
 	void GiveStartupAbilities();
@@ -66,7 +58,6 @@ protected:
 	
 	void OnHealthChanged(const FOnAttributeChangeData& AttributeChangeData);
 	virtual void HandleDeath();
-
 private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Abilities")

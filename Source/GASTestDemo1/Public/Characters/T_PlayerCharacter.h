@@ -15,7 +15,7 @@ class GASTESTDEMO1_API AT_PlayerCharacter : public AT_BaseCharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
+
 	AT_PlayerCharacter();
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -29,5 +29,5 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
-	//BP_PlayerCharacters
+
 };
