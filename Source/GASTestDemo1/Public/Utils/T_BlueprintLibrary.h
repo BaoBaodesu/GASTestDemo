@@ -6,6 +6,9 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "T_BlueprintLibrary.generated.h"
 
+struct FGameplayTag;
+class UGameplayEffect;
+
 UENUM(BlueprintType)
 enum class EHitDirection : uint8
 {
@@ -33,13 +36,30 @@ class GASTESTDEMO1_API UT_BlueprintLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-
+	
+	// 判断攻击来自目标的哪个方向
 	UFUNCTION(BlueprintPure)
 	static EHitDirection GetHitDirection(const FVector& TargetForward, const FVector& ToInstigator);
 
+	// 将受击方向枚举转换为名字
 	UFUNCTION(BlueprintPure)
 	static FName GetHitDirectionName(const EHitDirection& HitDirection);
 	
+	// 查找距离 Origin 最近的、带有指定 Tag 的 Actor
 	UFUNCTION(BlueprintCallable)
 	static FClosestActorWithTagResult FindClosestActorWithTag(const UObject* WorldContextObject, const FVector& Origin, const FName& Tag);
+	
+	// 给玩家发送伤害事件，并传入伤害效果、事件数据、Tag 和伤害数值
+	UFUNCTION(BlueprintCallable)
+	static void SendDamageEventToPlayer(AActor* Target, const TSubclassOf<UGameplayEffect>& DamageEffect, UPARAM(ref) FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, UObject* OptionalParticleSystem = nullptr);
+	
+	// 在角色前方生成一个球形检测范围，返回检测到的角色
+	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")
+	static TArray<AActor*> HitBoxOverlapTest(AActor* AvatarActor, float HitBoxRadius, float HitBoxForwardOffset = 0.f, float HitBoxElevationOffset = 0.f, bool bDrawDebugs = false);
+
+	// 绘制 HitBoxOverlapTest 的调试球体和命中目标位置
+	static void DrawHitBoxOverlapDebugs(const UObject* WorldContextObject, const TArray<FOverlapResult>& OverlapResults, const FVector& HitBoxLocation, float HitBoxRadius);
+
+	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")
+	static TArray<AActor*> ApplyKnockback(AActor* AvatarActor, const TArray<AActor*>& HitActors, float InnerRadius, float OuterRadius, float LaunchForceMagnitude, float RotationAngle = 45.f, bool bDrawDebugs = false);
 };

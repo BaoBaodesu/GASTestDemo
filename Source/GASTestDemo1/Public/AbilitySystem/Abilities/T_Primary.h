@@ -16,20 +16,18 @@ class GASTESTDEMO1_API UT_Primary : public UT_GameplayAbility
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")
-	TArray<AActor*> HitBoxOverlapTest();
-
-	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")
 	void SendHitReactEventToActors(const TArray<AActor*>& ActorsHit);
 	
-private:
-	void DrawHitBoxOverlapDebugs(const TArray<FOverlapResult>& OverlapResults, const FVector& HitBoxLocation) const;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Crash|Abilities")
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crash|Abilities")
 	float HitBoxRadius = 100.0f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Crash|Abilities")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crash|Abilities")
 	float HitBoxForwardOffset = 200.0f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Crash|Abilities")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crash|Abilities")
 	float HitBoxElevationOffset = 20.0f;
+private:
+
+
 };

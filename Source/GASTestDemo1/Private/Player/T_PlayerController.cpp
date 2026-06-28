@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Characters/T_BaseCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameplayTags/TTags.h"
 
@@ -38,6 +39,7 @@ void AT_PlayerController::SetupInputComponent()
 void AT_PlayerController::Jump()
 {
 	if (!IsValid(GetCharacter())) return;
+	if (!IsAlive()) return;
 	
 	GetCharacter()->Jump();
 }
@@ -52,6 +54,7 @@ void AT_PlayerController::StopJumping()
 void AT_PlayerController::Move(const FInputActionValue& Value)
 {
 	if (!IsValid(GetPawn())) return;
+	if (!IsAlive()) return;
 	
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 	
@@ -89,8 +92,16 @@ void AT_PlayerController::Tertiary()
 
 void AT_PlayerController::ActivateAbility(const FGameplayTag& AbilityTag) const
 {
+	if (!IsAlive()) return;
 	UAbilitySystemComponent* ASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
 	if (!IsValid(ASC)) return;	
 	
 	ASC->TryActivateAbilitiesByTag(AbilityTag.GetSingleTagContainer());
+}
+
+bool AT_PlayerController::IsAlive() const
+{
+	AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(GetPawn());
+	if (!IsValid(BaseCharacter)) return false;
+	return BaseCharacter->IsAlive();
 }
