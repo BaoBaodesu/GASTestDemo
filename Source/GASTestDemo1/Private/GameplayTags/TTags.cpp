@@ -5,10 +5,17 @@
 
 namespace TTags
 {
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(None, "TTags.None", "无标签");
+	
 	namespace SetByCaller
 	{
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Projectile, "TTags.SetByCaller.Projectile", "投射物的标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Melee, "TTags.SetByCaller.Melee", "近战的标签");
+		
+		namespace Player
+		{
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.SetByCaller.Player.Secondary", "调用玩家次要攻击的标签");
+		}
 	}
 	namespace TAbilities
 	{
@@ -42,5 +49,9 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(EndAttack, "TTags.Events.Enemy.EndAttack", "敌人攻击结束标签");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(MeleeTraceHit, "TTags.Events.Enemy.MeleeTraceHit", "敌人近战命中的标签");
 		}
+	}
+	namespace Cooldown
+	{
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.Cooldown.Secondary", "次要攻击冷却标签");
 	}
 }

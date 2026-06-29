@@ -47,11 +47,14 @@ public:
 	
 	// 查找距离 Origin 最近的、带有指定 Tag 的 Actor
 	UFUNCTION(BlueprintCallable)
-	static FClosestActorWithTagResult FindClosestActorWithTag(const UObject* WorldContextObject, const FVector& Origin, const FName& Tag);
+	static FClosestActorWithTagResult FindClosestActorWithTag(UObject* WorldContextObject, const FVector& Origin, const FName& Tag, float SearchRange);
 	
 	// 给玩家发送伤害事件，并传入伤害效果、事件数据、Tag 和伤害数值
 	UFUNCTION(BlueprintCallable)
-	static void SendDamageEventToPlayer(AActor* Target, const TSubclassOf<UGameplayEffect>& DamageEffect, UPARAM(ref) FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, UObject* OptionalParticleSystem = nullptr);
+	static void SendDamageEventToPlayer(AActor* Target, const TSubclassOf<UGameplayEffect>& DamageEffect, UPARAM(ref) FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, const FGameplayTag &EventTagOverride, UObject* OptionalParticleSystem = nullptr);
+	
+	UFUNCTION(BlueprintCallable)
+	static void SendDamageEventToPlayers(TArray<AActor*> Targets, const TSubclassOf<UGameplayEffect>& DamageEffect, UPARAM(ref) FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, const FGameplayTag& EventTagOverride, UObject* OptionalParticleSystem = nullptr);
 	
 	// 在角色前方生成一个球形检测范围，返回检测到的角色
 	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")

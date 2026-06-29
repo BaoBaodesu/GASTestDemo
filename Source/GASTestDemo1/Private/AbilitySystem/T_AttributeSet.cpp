@@ -30,6 +30,11 @@ void UT_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		OnAttributesInitialized.Broadcast();
 	}
 	
+	if (Data.EvaluatedData.Attribute == GetManaAttribute())
+	{
+		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+	}
+	
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute() && GetHealth() <= 0.0f)
 	{
 		FGameplayEventData Payload;

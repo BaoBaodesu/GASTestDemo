@@ -49,6 +49,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void RotateToTarget(AActor* RotateTarget);
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Crash|Damage")
+	float DamageNumberVerticalOffset{200.f};
 
 protected:
 	// 初始能力

@@ -2,8 +2,11 @@
 
 #include "Characters/T_EnemyCharacter.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
+#include "GameplayTags/TTags.h"
+#include "Net/UnrealNetwork.h"
 #include "Runtime/AIModule/Classes/AIController.h"
 
 
@@ -19,6 +22,13 @@ AT_EnemyCharacter::AT_EnemyCharacter()
 	AttributeSet = CreateDefaultSubobject<UT_AttributeSet>("AttributeSet");
 }
 
+void AT_EnemyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ThisClass, bIsBeingLaunched);
+}
+
 UAbilitySystemComponent* AT_EnemyCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
@@ -28,6 +38,27 @@ UAttributeSet* AT_EnemyCharacter::GetAttributeSet() const
 {
 	return AttributeSet;
 }
+
+void AT_EnemyCharacter::StopMovementUntilLanded()
+{
+	bIsBeingLaunched = true;
+	AAIController* AIController = GetController<AAIController>();
+	if (!IsValid(AIController)) return;
+	
+	AIController->StopMovement();
+	if (!LandedDelegate.IsAlreadyBound(this, &ThisClass::EnableMovementOnLanded))
+	{
+		LandedDelegate.AddDynamic(this, &ThisClass::EnableMovementOnLanded);
+	}
+}
+
+void AT_EnemyCharacter::EnableMovementOnLanded(const FHitResult& Hit)
+{
+	bIsBeingLaunched = false;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, TTags::Events::Enemy::EndAttack, FGameplayEventData());
+	LandedDelegate.RemoveAll(this);
+}
+
 
 void AT_EnemyCharacter::BeginPlay()
 {
@@ -58,3 +89,4 @@ void AT_EnemyCharacter::HandleDeath()
 	if (!IsValid(AIController)) return;
 	AIController->StopMovement();
 }
+

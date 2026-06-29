@@ -139,17 +139,19 @@ void UT_WidgetComponent::BindWidgetToAttributeChanges(UWidget* WidgetObject,
 	// 判断这个 Widget 是否是 UT_AttributeWidget
 	UT_AttributeWidget* AttributeWidget = Cast<UT_AttributeWidget>(WidgetObject);
 	if (!IsValid(AttributeWidget)) return;
+
 	// 判断这个 Widget 绑定的属性是否和当前 Pair 一致
 	if (!AttributeWidget->MatchesAttributes(Pair)) return;
-	
+		
+	AttributeWidget->AvatarActor = CrashCharacter;
 	// 先主动刷新一次 UI，确保初始显示正确
-	AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get());
+	AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get(), 0.0f);
 	
 	// 监听当前属性的变化，例如监听 Health 变化
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Pair.Key)
 	.AddLambda([this, AttributeWidget, Pair](const FOnAttributeChangeData& AttributeChangeData)
 	{
 		// 属性变化后，重新读取当前值和最大值，并更新 UI
-		AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get());
+		AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get(), AttributeChangeData.OldValue);
 	});
 }

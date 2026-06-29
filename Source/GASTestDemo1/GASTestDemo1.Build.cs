@@ -19,7 +19,8 @@ public class GASTestDemo1 : ModuleRules
 			"GameplayTasks",
 			"GameplayTags",
 			"UMG",
-			"AIModule"
+			"AIModule",
+			"Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

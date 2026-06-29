@@ -37,7 +37,7 @@ void AT_Projectile::NotifyActorBeginOverlap(AActor* OtherActor)
 	Payload.Instigator = GetOwner();
 	Payload.Target = PlayerCharacter;
 	
-	UT_BlueprintLibrary::SendDamageEventToPlayer(PlayerCharacter, DamageEffect, Payload, TTags::SetByCaller::Projectile, Damage);
+	UT_BlueprintLibrary::SendDamageEventToPlayer(PlayerCharacter, DamageEffect, Payload, TTags::SetByCaller::Projectile, Damage, TTags::None);
 
 	UE_LOG(LogTemp, Log, TEXT("Damage: %f"), Damage);
 

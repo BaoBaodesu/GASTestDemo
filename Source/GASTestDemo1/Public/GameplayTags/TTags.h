@@ -8,10 +8,16 @@
 
 namespace TTags
 {
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(None);
+	
 	namespace SetByCaller
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Projectile);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Melee);
+		namespace Player
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Secondary);
+		}
 	}
 	namespace TAbilities
 	{
@@ -46,5 +52,9 @@ namespace TTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(EndAttack);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(MeleeTraceHit);
 		}
+	}
+	namespace Cooldown
+	{
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Secondary);
 	}
 }

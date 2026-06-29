@@ -16,6 +16,7 @@ public:
 
 	AT_EnemyCharacter();
 	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual UAttributeSet* GetAttributeSet() const override;
 	
@@ -31,8 +32,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crash|AI")
 	float MaxAttackDelay{0.5f};
 	
+	// 搜索范围
+	UPROPERTY(EditAnywhere, Category = "Crash|AI")
+	float SearchRange = 1000.0f;
+	
 	UFUNCTION(BlueprintImplementableEvent)
 	float GetTimelineLength();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated)
+	bool bIsBeingLaunched = false;
+
+	void StopMovementUntilLanded();
 protected:
 
 	virtual void BeginPlay() override;
@@ -40,6 +50,9 @@ protected:
 	
 private:
 
+	UFUNCTION()
+	void EnableMovementOnLanded(const FHitResult& Hit);
+	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
