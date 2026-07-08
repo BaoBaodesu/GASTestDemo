@@ -19,6 +19,7 @@ class UGameplayAbility;
 class UAbilitySystemComponent;
 class UT_AbilitySystemComponent;
 class UGameplayEffect;
+class UT_LockOnComponent;
 
 // 声明一个 ASC 初始化完成事件
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FASCInitialized, UAbilitySystemComponent*, ASC, UAttributeSet*, AS);
@@ -37,6 +38,9 @@ public:
 	virtual UAttributeSet* GetAttributeSet() const { return nullptr; }
 	bool IsAlive() const { return bAlive; }
 	void SetAlive(bool bAliveStatus) { bAlive = bAliveStatus; }
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UT_LockOnComponent* LockOnComponent;
 	
 	UPROPERTY(BlueprintAssignable)
 	FASCInitialized OnASCInitialized;

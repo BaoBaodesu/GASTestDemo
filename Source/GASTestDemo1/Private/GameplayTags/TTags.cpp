@@ -7,6 +7,21 @@ namespace TTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(None, "TTags.None", "无标签");
 	
+	namespace State
+	{
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.State.LockOn", "角色正在锁定敌人");
+		
+		namespace Action
+		{
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Busy, "TTags.State.Action.Busy", "角色正在执行动作，阻止重复触发其他动作");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Attacking, "TTags.State.Action.Attacking", "角色正在攻击");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dodging, "TTags.State.Action.Dodging", "角色正在闪避");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(HitReact, "TTags.State.Action.HitReact", "角色正在播放受击反应");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Casting, "TTags.State.Action.Casting", "角色正在施法或释放技能");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dead, "TTags.State.Action.Dead", "角色已经死亡");
+		}
+	}
+	
 	namespace SetByCaller
 	{
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Projectile, "TTags.SetByCaller.Projectile", "投射物的标签");
@@ -26,11 +41,18 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Primary, "TTags.TAbilities.Primary", "主要能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.TAbilities.Secondary", "次要能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Tertiary, "TTags.TAbilities.Tertiary", "第三能力标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(StandingDodge, "TTags.TAbilities.StandingDodge", "站立闪避标签");
+		
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.TAbilities.LockOn", "锁定敌人能力");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.TAbilities.SwitchLockOnTargetLeft", "向左切换锁定目标");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetRight, "TTags.TAbilities.SwitchLockOnTargetRight", "向右切换锁定目标");
+		
 		namespace Enemy
 		{
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Attack, "TTags.TAbilities.Enemy.Attack", "敌人攻击标签");
 		}
 	}
+	
 	namespace Events
 	{
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(KillScored, "TTags.Events.KillScored", "击杀得分的事件");
@@ -42,6 +64,11 @@ namespace TTags
 			
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Primary, "TTags.Events.Player.Primary", "主要能力事件标签")
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.Events.Player.Secondary", "次要能力事件标签")
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(StandingDodge, "TTags.Events.Player.StandingDodge", "站立闪避事件标签")
+			
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.Events.Player.LockOn", "玩家锁定事件");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.Events.Player.SwitchLockOnTargetLeft", "玩家向左切换锁定目标事件");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetRight, "TTags.Events.Player.SwitchLockOnTargetRight", "玩家向右切换锁定目标事件");
 		}
 		namespace Enemy
 		{
@@ -55,3 +82,4 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Secondary, "TTags.Cooldown.Secondary", "次要攻击冷却标签");
 	}
 }
+

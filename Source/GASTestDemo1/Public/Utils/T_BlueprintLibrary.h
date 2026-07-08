@@ -18,6 +18,21 @@ enum class EHitDirection : uint8
 	Back
 };
 
+// UENUM(BlueprintType)
+// enum class ERollDirection : uint8
+// {
+// 	Forward,
+// 	ForwardRight,
+// 	Right,
+// 	BackRight,
+// 	Back,
+// 	BackLeft,
+// 	Left,
+// 	ForwardLeft,
+// 	None
+// };
+
+
 USTRUCT(BlueprintType)
 struct FClosestActorWithTagResult
 {

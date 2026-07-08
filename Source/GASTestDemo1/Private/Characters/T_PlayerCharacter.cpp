@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Player/Components/T_LockOnComponent.h"
 #include "Player/T_PlayerState.h"
 
 
@@ -43,6 +44,8 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 	
 	Tags.Add(CrashTags::Player);
+	
+	LockOnComponent = CreateDefaultSubobject<UT_LockOnComponent>(TEXT("LockOnComponent"));
 }
 
 UAbilitySystemComponent* AT_PlayerCharacter::GetAbilitySystemComponent() const

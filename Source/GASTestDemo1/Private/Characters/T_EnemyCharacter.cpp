@@ -7,6 +7,7 @@
 #include "AbilitySystem/T_AttributeSet.h"
 #include "GameplayTags/TTags.h"
 #include "Net/UnrealNetwork.h"
+#include "UI/T_ActorWidgetComponent.h"
 #include "Runtime/AIModule/Classes/AIController.h"
 
 
@@ -20,6 +21,9 @@ AT_EnemyCharacter::AT_EnemyCharacter()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	
 	AttributeSet = CreateDefaultSubobject<UT_AttributeSet>("AttributeSet");
+	
+	LockOnWidget = CreateDefaultSubobject<UT_ActorWidgetComponent>(TEXT("LockOnWidget"));
+	LockOnWidget->SetupAttachment(GetRootComponent());
 }
 
 void AT_EnemyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

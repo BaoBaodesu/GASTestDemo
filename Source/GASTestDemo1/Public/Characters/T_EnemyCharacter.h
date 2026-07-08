@@ -7,6 +7,7 @@
 #include "T_EnemyCharacter.generated.h"
 
 class UAttributeSet;
+class UT_ActorWidgetComponent;
 UCLASS()
 class GASTESTDEMO1_API AT_EnemyCharacter : public AT_BaseCharacter
 {
@@ -35,6 +36,9 @@ public:
 	// 搜索范围
 	UPROPERTY(EditAnywhere, Category = "Crash|AI")
 	float SearchRange = 1000.0f;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Crash|UI")
+	TObjectPtr<UT_ActorWidgetComponent> LockOnWidget;
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	float GetTimelineLength();
