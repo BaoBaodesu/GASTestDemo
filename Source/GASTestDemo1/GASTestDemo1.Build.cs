@@ -20,10 +20,10 @@ public class GASTestDemo1 : ModuleRules
 			"GameplayTags",
 			"UMG",
 			"AIModule",
-			"Niagara"
+			"Niagara",
+			"MotionWarping"
 		});
-
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

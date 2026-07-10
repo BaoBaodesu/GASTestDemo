@@ -50,6 +50,7 @@ void UT_AbilitySystemComponent::AddToAbilityLevel(TSubclassOf<UGameplayAbility> 
 	}
 }
 
+
 // 检查传入的 Ability 是否带有 ActivateOnGiven 标签。
 void UT_AbilitySystemComponent::HandleAutoActivatedAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
@@ -62,6 +63,27 @@ void UT_AbilitySystemComponent::HandleAutoActivatedAbility(const FGameplayAbilit
 			// 尝试激活这个 Ability
 			TryActivateAbility(AbilitySpec.Handle);
 			return;
+		}
+	}
+}
+
+void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid()) return;
+
+	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+	{
+		if (!AbilitySpec.Ability) continue;
+
+		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(InputTag)) continue;
+
+		if (AbilitySpec.IsActive())
+		{
+			AbilitySpecInputPressed(AbilitySpec);
+		}
+		else
+		{
+			TryActivateAbility(AbilitySpec.Handle);
 		}
 	}
 }

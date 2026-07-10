@@ -27,6 +27,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crash|Abilities")
 	float HitBoxElevationOffset = 20.0f;
+
 private:
 
 

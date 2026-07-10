@@ -44,6 +44,67 @@ FName UT_BlueprintLibrary::GetHitDirectionName(const EHitDirection& HitDirection
 	}
 }
 
+ERollDirection UT_BlueprintLibrary::GetRollDirectionFromInput(const FVector2D& MovementInput)
+{
+	if (MovementInput.IsNearlyZero(0.1f)){ return ERollDirection::Forward; }
+
+	const FVector2D NormalizedInput = MovementInput.GetSafeNormal();
+
+	// X = Right，Y = Forward
+	const float Angle = FMath::RadiansToDegrees(FMath::Atan2(NormalizedInput.X, NormalizedInput.Y));
+
+	if (Angle >= -22.5f && Angle < 22.5f)
+	{
+		return ERollDirection::Forward;
+	}
+	if (Angle >= 22.5f && Angle < 67.5f)
+	{
+		return ERollDirection::ForwardRight;
+	}
+	if (Angle >= 67.5f && Angle < 112.5f)
+	{
+		return ERollDirection::Right;
+	}
+	if (Angle >= 112.5f && Angle < 157.5f)
+	{
+		return ERollDirection::BackRight;
+	}
+	if (Angle >= 157.5f || Angle < -157.5f)
+	{
+		return ERollDirection::Back;
+	}
+	if (Angle >= -157.5f && Angle < -112.5f)
+	{
+		return ERollDirection::BackLeft;
+	}
+	if (Angle >= -112.5f && Angle < -67.5f)
+	{
+		return ERollDirection::Left;
+	}
+	if (Angle >= -67.5f && Angle < -22.5f)
+	{
+		return ERollDirection::ForwardLeft;
+	}
+
+	return ERollDirection::Forward;
+}
+
+FName UT_BlueprintLibrary::GetRollDirectionName(const ERollDirection& RollDirection)
+{
+	switch (RollDirection)
+	{
+		case ERollDirection::Forward: return FName("Forward");
+		case ERollDirection::ForwardRight: return FName("ForwardRight");
+		case ERollDirection::Right: return FName("Right");
+		case ERollDirection::BackRight: return FName("BackRight");
+		case ERollDirection::Back: return FName("Back");
+		case ERollDirection::BackLeft: return FName("BackLeft");
+		case ERollDirection::Left: return FName("Left");
+		case ERollDirection::ForwardLeft: return FName("ForwardLeft");
+		default: return FName("None");
+	}
+}
+
 /**
   * 在场景中找出“带指定Tag的Actor里，距离某个点最近的那个Actor”
   */

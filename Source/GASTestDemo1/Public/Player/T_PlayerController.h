@@ -47,7 +47,7 @@ private:
 	TObjectPtr<UInputAction> TertiaryAction;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
-	TObjectPtr<UInputAction> StandingDodgeAction;
+	TObjectPtr<UInputAction> RollAction;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* LockOnAction;
@@ -64,6 +64,7 @@ private:
 	void Secondary();
 	void Tertiary();
 	void StandingDodge();
+	void Roll();
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
 	bool IsAlive() const;
 	void StartLockOn();

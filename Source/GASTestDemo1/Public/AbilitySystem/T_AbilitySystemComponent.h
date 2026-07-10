@@ -22,6 +22,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crash|Abilities")
 	void AddToAbilityLevel(TSubclassOf<UGameplayAbility> AbilityClass, int32 Level = 1);
 	
+	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	
 private:
 	void HandleAutoActivatedAbility(const FGameplayAbilitySpec& AbilitySpec);
 };

@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_EnemyCharacter.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -39,6 +40,11 @@ void UT_LockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                        FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (OwnerCharacter)
+	{
+		DrawDebugBox(GetWorld(), OwnerCharacter->GetActorLocation(), FVector(LockOnRadius), FColor::Green, false, 0.0f, 0, 2.0f);
+	}
 
 	if (!IsValid(CurrentTargetActor)) return;
 

@@ -18,19 +18,19 @@ enum class EHitDirection : uint8
 	Back
 };
 
-// UENUM(BlueprintType)
-// enum class ERollDirection : uint8
-// {
-// 	Forward,
-// 	ForwardRight,
-// 	Right,
-// 	BackRight,
-// 	Back,
-// 	BackLeft,
-// 	Left,
-// 	ForwardLeft,
-// 	None
-// };
+UENUM(BlueprintType)
+enum class ERollDirection : uint8
+{
+	Forward,
+	ForwardRight,
+	ForwardLeft,
+	Right,
+	BackRight,
+	Back,
+	BackLeft,
+	Left,
+	None
+};
 
 
 USTRUCT(BlueprintType)
@@ -59,6 +59,14 @@ public:
 	// 将受击方向枚举转换为名字
 	UFUNCTION(BlueprintPure)
 	static FName GetHitDirectionName(const EHitDirection& HitDirection);
+	
+	// 根据移动输入判断翻滚方向
+	UFUNCTION(BlueprintPure)
+	static ERollDirection GetRollDirectionFromInput(const FVector2D& MovementInput);
+
+	// 将翻滚方向枚举转换为 Montage Section Name
+	UFUNCTION(BlueprintPure)
+	static FName GetRollDirectionName(const ERollDirection& RollDirection);
 	
 	// 查找距离 Origin 最近的、带有指定 Tag 的 Actor
 	UFUNCTION(BlueprintCallable)

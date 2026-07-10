@@ -5,6 +5,7 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Characters/T_BaseCharacter.h"
@@ -36,7 +37,7 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &ThisClass::Primary);
 	EnhancedInputComponent->BindAction(SecondaryAction, ETriggerEvent::Started, this, &ThisClass::Secondary);
 	EnhancedInputComponent->BindAction(TertiaryAction, ETriggerEvent::Started, this, &ThisClass::Tertiary);
-	EnhancedInputComponent->BindAction(StandingDodgeAction, ETriggerEvent::Started, this, &ThisClass::StandingDodge);
+	EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ThisClass::Roll);
 	
 	EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &ThisClass::StartLockOn);
 	EnhancedInputComponent->BindAction(SwitchLockOnAction, ETriggerEvent::Started, this, &ThisClass::SwitchLockOnTarget);
@@ -106,11 +107,23 @@ void AT_PlayerController::StandingDodge()
 	ActivateAbility(TTags::TAbilities::StandingDodge);
 }
 
+void AT_PlayerController::Roll()
+{
+	ActivateAbility(TTags::TAbilities::Roll);
+}
+
 void AT_PlayerController::ActivateAbility(const FGameplayTag& AbilityTag) const
 {
 	if (!IsAlive()) return;
 	UAbilitySystemComponent* ASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
-	if (!IsValid(ASC)) return;	
+	if (!IsValid(ASC)) return;
+	
+	if (UT_AbilitySystemComponent* T_ASC = Cast<UT_AbilitySystemComponent>(ASC))
+	{
+		T_ASC->AbilityInputTagPressed(AbilityTag);
+		return;
+	}
+	
 	ASC->TryActivateAbilitiesByTag(AbilityTag.GetSingleTagContainer());
 }
 
