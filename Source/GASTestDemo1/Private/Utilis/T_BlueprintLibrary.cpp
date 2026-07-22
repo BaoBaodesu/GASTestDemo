@@ -10,6 +10,7 @@
 #include "Characters/T_EnemyCharacter.h"
 #include "GameplayTags/TTags.h"
 #include "Engine/OverlapResult.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 
 EHitDirection UT_BlueprintLibrary::GetHitDirection(const FVector& TargetForward, const FVector& ToInstigator)
@@ -44,14 +45,25 @@ FName UT_BlueprintLibrary::GetHitDirectionName(const EHitDirection& HitDirection
 	}
 }
 
-ERollDirection UT_BlueprintLibrary::GetRollDirectionFromInput(const FVector2D& MovementInput)
+ERollDirection UT_BlueprintLibrary::GetRollDirectionFromInput(const APawn* Pawn, const FVector2D& MovementInput)
 {
-	if (MovementInput.IsNearlyZero(0.1f)){ return ERollDirection::Forward; }
+	if (!IsValid(Pawn) || MovementInput.IsNearlyZero(0.1f))
+	{
+		return ERollDirection::Forward;
+	}
 
-	const FVector2D NormalizedInput = MovementInput.GetSafeNormal();
+	const FRotator ControlYawRotation(0.f, Pawn->GetControlRotation().Yaw, 0.f);
 
-	// X = Right，Y = Forward
-	const float Angle = FMath::RadiansToDegrees(FMath::Atan2(NormalizedInput.X, NormalizedInput.Y));
+	const FVector WorldInputDirection =
+		ControlYawRotation.Vector() * MovementInput.Y +
+		FRotationMatrix(ControlYawRotation).GetUnitAxis(EAxis::Y) * MovementInput.X;
+
+	const FVector LocalInputDirection =
+		Pawn->GetActorTransform().InverseTransformVectorNoScale(WorldInputDirection).GetSafeNormal();
+
+	const float Angle = FMath::RadiansToDegrees(
+		FMath::Atan2(LocalInputDirection.Y, LocalInputDirection.X)
+	);
 
 	if (Angle >= -22.5f && Angle < 22.5f)
 	{

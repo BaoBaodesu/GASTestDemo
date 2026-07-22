@@ -12,6 +12,7 @@
 #include "GameFramework/Character.h"
 #include "GameplayTags/TTags.h"
 #include "Player/Components/T_LockOnComponent.h"
+#include "Player/Components/T_TraversalComponent.h"
 
 void AT_PlayerController::SetupInputComponent()
 {
@@ -45,10 +46,18 @@ void AT_PlayerController::SetupInputComponent()
 
 void AT_PlayerController::Jump()
 {
-	if (!IsValid(GetCharacter())) return;
+	ACharacter* ControlledCharacter = GetCharacter();
+	if (!IsValid(ControlledCharacter)) return;
 	if (!IsAlive()) return;
 	
-	GetCharacter()->Jump();
+	UT_TraversalComponent* TraversalComponent =
+		ControlledCharacter->FindComponentByClass<UT_TraversalComponent>();
+	if (IsValid(TraversalComponent) && TraversalComponent->Jump())
+	{
+		return;
+	}
+	
+	ControlledCharacter->Jump();
 }
 
 void AT_PlayerController::StopJumping()

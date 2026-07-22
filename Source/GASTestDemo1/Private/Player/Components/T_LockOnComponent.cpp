@@ -41,11 +41,6 @@ void UT_LockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (OwnerCharacter)
-	{
-		DrawDebugBox(GetWorld(), OwnerCharacter->GetActorLocation(), FVector(LockOnRadius), FColor::Green, false, 0.0f, 0, 2.0f);
-	}
-
 	if (!IsValid(CurrentTargetActor)) return;
 
 	if (!IsValidTarget(CurrentTargetActor))
@@ -58,6 +53,11 @@ void UT_LockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UT_LockOnComponent::ToggleLockOn()
 {
+	if (OwnerCharacter)
+	{
+		DrawDebugSphere(GetWorld(), OwnerCharacter->GetActorLocation(), LockOnRadius, 32, FColor::Green, false, 2.0f, 0, 2.0f);
+	}
+
 	if (IsValid(CurrentTargetActor))
 	{
 		StopLockOn();

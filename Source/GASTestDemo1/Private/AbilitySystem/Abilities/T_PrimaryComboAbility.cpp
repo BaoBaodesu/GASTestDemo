@@ -124,10 +124,5 @@ void UT_PrimaryComboAbility::EndAbility(
 	bQueuedNextCombo = false;
 	bComboMontageSwitching = false;
 
-	if (ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
-	{
-		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(TTags::State::Action::ComboWindow);
-	}
-
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

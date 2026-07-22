@@ -4,6 +4,7 @@
 #include "GASTestDemo1/Public/Characters/T_PlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "MotionWarpingComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,6 +12,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Player/Components/T_LockOnComponent.h"
 #include "Player/T_PlayerState.h"
+#include "Player/Components/T_TraversalComponent.h"
 
 
 // Sets default values
@@ -46,7 +48,11 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	Tags.Add(CrashTags::Player);
 	
 	LockOnComponent = CreateDefaultSubobject<UT_LockOnComponent>(TEXT("LockOnComponent"));
+	TraversalComponent = CreateDefaultSubobject<UT_TraversalComponent>(TEXT("TraversalComponent"));
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 }
+
+
 
 UAbilitySystemComponent* AT_PlayerCharacter::GetAbilitySystemComponent() const
 {
@@ -97,5 +103,43 @@ void AT_PlayerCharacter::OnRep_PlayerState()
 	
 	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
 }
+
+void AT_PlayerCharacter::SetCameraCollisionEnabled(bool bEnabled)
+{
+	if (!IsValid(CameraBoom)) return;
+	
+	if (!bEnabled)
+	{
+		if (bTraversalCameraModeActive) return;
+		
+		bPreviousCameraCollisionEnabled = CameraBoom->bDoCollisionTest;
+		CameraBoom->bDoCollisionTest = false;
+		bTraversalCameraModeActive = true;
+		
+		return;
+	}
+	
+	if (!bTraversalCameraModeActive) return;
+	
+	CameraBoom->bDoCollisionTest = bPreviousCameraCollisionEnabled;
+	bTraversalCameraModeActive = false;
+}
+
+void AT_PlayerCharacter::SetTraversalCollisionEnabled(bool bEnabled)
+{
+	if (!IsValid(GetCapsuleComponent())) return;
+	if (!bEnabled)
+	{
+		if (bTraversalCollisionDisabled) return;
+		PreviousTraversalCollisionEnabled = GetCapsuleComponent()->GetCollisionEnabled();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		bTraversalCollisionDisabled = true;
+		return;
+	}
+	if (!bTraversalCollisionDisabled) return;
+	GetCapsuleComponent()->SetCollisionEnabled(PreviousTraversalCollisionEnabled);
+	bTraversalCollisionDisabled = false;
+}
+
 
 

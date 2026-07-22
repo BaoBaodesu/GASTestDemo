@@ -33,11 +33,15 @@ public:
 	// Sets default values for this character's properties
 	AT_BaseCharacter();
 	
+	virtual void OnMovementModeChanged( EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual UAttributeSet* GetAttributeSet() const { return nullptr; }
 	bool IsAlive() const { return bAlive; }
 	void SetAlive(bool bAliveStatus) { bAlive = bAliveStatus; }
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Crash|Movement")
+	bool bIsFalling = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UT_LockOnComponent* LockOnComponent;
@@ -53,7 +57,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void RotateToTarget(AActor* RotateTarget);
-	
+
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Crash|Damage")
 	float DamageNumberVerticalOffset{200.f};
 

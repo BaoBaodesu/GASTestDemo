@@ -3,6 +3,7 @@
 
 #include "GASTestDemo1/Public/Characters/T_BaseCharacter.h"
 #include "AbilitySystemComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 
 namespace CrashTags
@@ -14,12 +15,20 @@ namespace CrashTags
 AT_BaseCharacter::AT_BaseCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	
 	// 即使角色不可见，也始终更新动画姿势并刷新骨骼变换
 	// 确保专用服务器能够正常获取最新的骨骼位置
 	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 }
+
+void AT_BaseCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	
+	bIsFalling = GetCharacterMovement()->IsFalling();
+}
+
 
 void AT_BaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {

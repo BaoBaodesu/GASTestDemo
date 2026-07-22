@@ -17,6 +17,7 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Attacking, "TTags.State.Action.Attacking", "角色正在攻击");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dodging, "TTags.State.Action.Dodging", "角色正在闪避");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Rolling, "TTags.State.Action.Rolling", "角色正在翻滚");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Traversing, "TTags.State.Action.Traversing", "角色正在执行翻越动作");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(HitReact, "TTags.State.Action.HitReact", "角色正在播放受击反应");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Casting, "TTags.State.Action.Casting", "角色正在施法或释放技能");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(ComboWindow, "TTags.State.Action.ComboWindow", "连击输入窗口");
@@ -44,6 +45,7 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Tertiary, "TTags.TAbilities.Tertiary", "第三能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(StandingDodge, "TTags.TAbilities.StandingDodge", "站立闪避标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Roll, "TTags.TAbilities.Roll", "翻滚标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Traversal, "TTags.TAbilities.Traversal", "翻越能力标签");
 		
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.TAbilities.LockOn", "锁定敌人能力");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.TAbilities.SwitchLockOnTargetLeft", "向左切换锁定目标");

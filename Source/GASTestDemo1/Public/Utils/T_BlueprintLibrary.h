@@ -8,6 +8,7 @@
 
 struct FGameplayTag;
 class UGameplayEffect;
+class APawn;
 
 UENUM(BlueprintType)
 enum class EHitDirection : uint8
@@ -60,9 +61,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	static FName GetHitDirectionName(const EHitDirection& HitDirection);
 	
-	// 根据移动输入判断翻滚方向
+	// 根据角色本地空间中的移动输入判断翻滚方向
 	UFUNCTION(BlueprintPure)
-	static ERollDirection GetRollDirectionFromInput(const FVector2D& MovementInput);
+	static ERollDirection GetRollDirectionFromInput(const APawn* Pawn, const FVector2D& MovementInput);
 
 	// 将翻滚方向枚举转换为 Montage Section Name
 	UFUNCTION(BlueprintPure)

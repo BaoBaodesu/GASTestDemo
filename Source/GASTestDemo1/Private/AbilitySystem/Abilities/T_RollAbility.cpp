@@ -7,6 +7,7 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Characters/T_BaseCharacter.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 #include "GameplayTags/TTags.h"
 #include "MotionWarpingComponent.h"
 #include "Player/T_PlayerController.h"
@@ -33,10 +34,15 @@ void UT_RollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		return;
 	}
 	
-	RollDirection = UT_BlueprintLibrary::GetRollDirectionFromInput(GetMovementInput());
-	RollSectionName = UT_BlueprintLibrary::GetRollDirectionName(RollDirection);
-
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	APawn* AvatarPawn = Cast<APawn>(AvatarActor);
+	if (!IsValid(AvatarPawn))
+	{
+		return;
+	}
+
+	RollDirection = UT_BlueprintLibrary::GetRollDirectionFromInput(AvatarPawn, GetMovementInput());
+	RollSectionName = UT_BlueprintLibrary::GetRollDirectionName(RollDirection);
 	
 	const FVector RollLocalDirection = GetRollLocalDirection(RollDirection);
 	const FVector RollWorldDirection = AvatarActor->GetActorRotation().RotateVector(RollLocalDirection).GetSafeNormal();
@@ -149,11 +155,5 @@ void UT_RollAbility::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	if (ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
-	{
-		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(TTags::State::Action::Busy);
-		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(TTags::State::Action::Rolling);
-	}
-
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
