@@ -131,6 +131,7 @@ void UT_Traversal::ActivateAbility(
 	}
 
 	PlayMontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnTraversalFinished);
+	PlayMontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnTraversalFinished);
 	PlayMontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnTraversalCancelled);
 	PlayMontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnTraversalCancelled);
 	PlayMontageTask->ReadyForActivation();
@@ -196,28 +197,41 @@ bool UT_Traversal::TryRestoreTraversalCollision(const bool bWasCancelled)
 	}
 	if (!bWasCancelled && CurrentActionType == ETraversalActionType::Vault)
 	{
-		PlayerCharacter->SetTraversalCollisionEnabled(true);
-		return false;
-	}
-	if (!bWasCancelled && CurrentActionType == ETraversalActionType::Climb)
-	{
 		const FVector CurrentLocation = PlayerCharacter->GetActorLocation();
-		if (TraversalComponent->IsCapsuleLocationClear(CurrentLocation, 0.f))
-		{
-			PlayerCharacter->SetTraversalCollisionEnabled(true);
-			return false;
-		}
-
 		FVector CurrentStandingLocation;
-		if (TraversalComponent->FindSafeStandingLocationBelow(
+		const bool bHasSafeStandingLocation =
+			TraversalComponent->FindSafeStandingLocationBelow(
 				CurrentLocation,
 				LandingCollisionClearance,
 				CurrentStandingLocation) &&
 			FMath::Abs(CurrentStandingLocation.Z - CurrentLocation.Z) <=
-				MaximumLandingCorrectionDistance)
+				MaximumLandingCorrectionDistance;
+
+		PlayerCharacter->SetTraversalCollisionEnabled(true);
+		return bHasSafeStandingLocation;
+	}
+	if (!bWasCancelled && CurrentActionType == ETraversalActionType::Climb)
+	{
+		const FVector CurrentLocation = PlayerCharacter->GetActorLocation();
+		FVector CurrentStandingLocation;
+		const bool bHasSafeStandingLocation =
+			TraversalComponent->FindSafeStandingLocationBelow(
+				CurrentLocation,
+				LandingCollisionClearance,
+				CurrentStandingLocation) &&
+			FMath::Abs(CurrentStandingLocation.Z - CurrentLocation.Z) <=
+				MaximumLandingCorrectionDistance;
+
+		if (TraversalComponent->IsCapsuleLocationClear(CurrentLocation, 0.f))
 		{
 			PlayerCharacter->SetTraversalCollisionEnabled(true);
-			return false;
+			return bHasSafeStandingLocation;
+		}
+
+		if (bHasSafeStandingLocation)
+		{
+			PlayerCharacter->SetTraversalCollisionEnabled(true);
+			return true;
 		}
 
 		const FVector SafeLandingLocation =

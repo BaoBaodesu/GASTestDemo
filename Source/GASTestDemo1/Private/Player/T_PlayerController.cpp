@@ -42,6 +42,10 @@ void AT_PlayerController::SetupInputComponent()
 	
 	EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &ThisClass::StartLockOn);
 	EnhancedInputComponent->BindAction(SwitchLockOnAction, ETriggerEvent::Started, this, &ThisClass::SwitchLockOnTarget);
+	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Started, this, &ThisClass::StartCatch);
+	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Completed, this, &ThisClass::StopCatch);
+	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Canceled, this, &ThisClass::StopCatch);
+	EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ThisClass::ReleaseGrab);
 }
 
 void AT_PlayerController::Jump()
@@ -49,13 +53,12 @@ void AT_PlayerController::Jump()
 	ACharacter* ControlledCharacter = GetCharacter();
 	if (!IsValid(ControlledCharacter)) return;
 	if (!IsAlive()) return;
+
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(ControlledCharacter);
+	if (IsValid(ASC) && ASC->HasMatchingGameplayTag(TTags::State::Action::Grabbing)) { SendPlayerGameplayEvent(TTags::Events::Player::Grab::Jump); return; }
 	
-	UT_TraversalComponent* TraversalComponent =
-		ControlledCharacter->FindComponentByClass<UT_TraversalComponent>();
-	if (IsValid(TraversalComponent) && TraversalComponent->Jump())
-	{
-		return;
-	}
+	UT_TraversalComponent* TraversalComponent = ControlledCharacter->FindComponentByClass<UT_TraversalComponent>();
+	if (IsValid(TraversalComponent) && TraversalComponent->Jump()) return;
 	
 	ControlledCharacter->Jump();
 }
@@ -69,16 +72,20 @@ void AT_PlayerController::StopJumping()
 
 void AT_PlayerController::Move(const FInputActionValue& Value)
 {
-	if (!IsValid(GetPawn())) return;
+	ACharacter* ControlledCharacter = GetCharacter();
+	if (!IsValid(ControlledCharacter)) return;
 	if (!IsAlive()) return;
-	
+
 	MovementVector = Value.Get<FVector2D>();
+
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(ControlledCharacter);
+	if (IsValid(ASC) && ASC->HasMatchingGameplayTag(TTags::State::Action::Grabbing)) { SendPlayerGameplayEvent(TTags::Events::Player::Grab::Move, MovementVector.X); return; }
 	
 	// 用来找出哪个方向是前方
 	const FRotator YawRotation(0.f, GetControlRotation().Yaw, 0.f);
 	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-	
+
 	GetPawn()->AddMovementInput(ForwardDirection, MovementVector.Y);
 	GetPawn()->AddMovementInput(RightDirection, MovementVector.X);
 }
@@ -86,6 +93,10 @@ void AT_PlayerController::Move(const FInputActionValue& Value)
 void AT_PlayerController::StopMove()
 {
 	MovementVector = FVector2D::ZeroVector;
+	if (!IsValid(GetPawn())) return;
+
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
+	if (IsValid(ASC) && ASC->HasMatchingGameplayTag(TTags::State::Action::Grabbing)) SendPlayerGameplayEvent(TTags::Events::Player::Grab::Move, 0.0f);
 }
 
 void AT_PlayerController::Look(const FInputActionValue& Value)
@@ -172,4 +183,33 @@ void AT_PlayerController::SwitchLockOnTarget(const FInputActionValue& Value)
 	UAbilitySystemComponent* ASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
 	if (!IsValid(ASC)) return;	
 	ASC->TryActivateAbilitiesByTag(AbilityTags);
+}
+
+void AT_PlayerController::StartCatch()
+{
+	if (!IsAlive()) return;
+	SendPlayerGameplayEvent(TTags::Events::Player::Grab::Catch);
+}
+
+void AT_PlayerController::StopCatch()
+{
+	SendPlayerGameplayEvent(TTags::Events::Player::Grab::StopCatch);
+}
+
+void AT_PlayerController::ReleaseGrab()
+{
+	SendPlayerGameplayEvent(TTags::Events::Player::Grab::Release);
+}
+
+void AT_PlayerController::SendPlayerGameplayEvent(const FGameplayTag& EventTag, float EventMagnitude) const
+{
+	ACharacter* ControlledCharacter = GetCharacter();
+	if (!IsValid(ControlledCharacter)) return;
+
+	FGameplayEventData Payload;
+	Payload.EventTag = EventTag;
+	Payload.Instigator = ControlledCharacter;
+	Payload.Target = ControlledCharacter;
+	Payload.EventMagnitude = EventMagnitude;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ControlledCharacter, EventTag, Payload);
 }

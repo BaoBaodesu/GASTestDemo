@@ -14,6 +14,7 @@ namespace TTags
 		namespace Action
 		{
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Busy, "TTags.State.Action.Busy", "角色正在执行动作，阻止重复触发其他动作");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Grabbing, "TTags.State.Action.Grabbing", "角色正在抓握");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Attacking, "TTags.State.Action.Attacking", "角色正在攻击");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Dodging, "TTags.State.Action.Dodging", "角色正在闪避");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Rolling, "TTags.State.Action.Rolling", "角色正在翻滚");
@@ -21,6 +22,12 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(HitReact, "TTags.State.Action.HitReact", "角色正在播放受击反应");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Casting, "TTags.State.Action.Casting", "角色正在施法或释放技能");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(ComboWindow, "TTags.State.Action.ComboWindow", "连击输入窗口");
+		}
+
+		namespace Grab
+		{
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Wall, "TTags.State.Grab.Wall", "角色正在抓握墙体");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Bar, "TTags.State.Grab.Bar", "角色正在抓握横杆");
 		}
 	}
 	
@@ -46,6 +53,7 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(StandingDodge, "TTags.TAbilities.StandingDodge", "站立闪避标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Roll, "TTags.TAbilities.Roll", "翻滚标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Traversal, "TTags.TAbilities.Traversal", "翻越能力标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Grab, "TTags.TAbilities.Grab", "抓握能力标签");
 		
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.TAbilities.LockOn", "锁定敌人能力");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.TAbilities.SwitchLockOnTargetLeft", "向左切换锁定目标");
@@ -78,6 +86,15 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Combo_SaveInput, "TTags.Events.Player.Combo.SaveInput", "允许保存连击输入");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Combo_Next, "TTags.Events.Player.Combo.Next", "进入下一段连击");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Combo_End, "TTags.Events.Player.Combo.End", "连击结束");
+
+			namespace Grab
+			{
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Catch, "TTags.Events.Player.Grab.Catch", "开始抓握检测事件");
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(StopCatch, "TTags.Events.Player.Grab.StopCatch", "停止抓握检测事件");
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Release, "TTags.Events.Player.Grab.Release", "松开抓握事件");
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Move, "TTags.Events.Player.Grab.Move", "抓握侧移事件");
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Jump, "TTags.Events.Player.Grab.Jump", "抓握跳跃事件");
+			}
 		}
 		namespace Enemy
 		{

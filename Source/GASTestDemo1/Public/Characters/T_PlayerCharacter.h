@@ -9,6 +9,7 @@
 class UCameraComponent;
 class USpringArmComponent;
 class UT_TraversalComponent;
+class UT_GrabComponent;
 class UMotionWarpingComponent;
 
 UCLASS()
@@ -44,6 +45,9 @@ private:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UT_TraversalComponent> TraversalComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UT_GrabComponent> GrabComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;

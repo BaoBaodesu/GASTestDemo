@@ -55,6 +55,12 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* SwitchLockOnAction;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	UInputAction* CatchAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	UInputAction* ReleaseAction;
+
 	void Jump();
 	void StopJumping();
 	void Move(const FInputActionValue& Value);
@@ -69,5 +75,9 @@ private:
 	bool IsAlive() const;
 	void StartLockOn();
 	void SwitchLockOnTarget(const FInputActionValue& Value);
+	void StartCatch();
+	void StopCatch();
+	void ReleaseGrab();
+	void SendPlayerGameplayEvent(const FGameplayTag& EventTag, float EventMagnitude = 0.0f) const;
 
 };

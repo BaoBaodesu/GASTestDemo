@@ -12,6 +12,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Player/Components/T_LockOnComponent.h"
 #include "Player/T_PlayerState.h"
+#include "Player/Components/T_GrabComponent.h"
 #include "Player/Components/T_TraversalComponent.h"
 
 
@@ -49,6 +50,7 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	
 	LockOnComponent = CreateDefaultSubobject<UT_LockOnComponent>(TEXT("LockOnComponent"));
 	TraversalComponent = CreateDefaultSubobject<UT_TraversalComponent>(TEXT("TraversalComponent"));
+	GrabComponent = CreateDefaultSubobject<UT_GrabComponent>(TEXT("GrabComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 }
 
