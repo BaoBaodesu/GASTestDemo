@@ -8,6 +8,7 @@ UT_Grab::UT_Grab()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	SetAssetTags(FGameplayTagContainer(TTags::TAbilities::Grab.GetTag()));
+	CancelAbilitiesWithTag.AddTag(TTags::TAbilities::Aim);
 
 	FAbilityTriggerData TriggerData;
 	TriggerData.TriggerTag = TTags::Events::Player::Grab::Catch;
@@ -106,7 +107,7 @@ void UT_Grab::HandleMove(FGameplayEventData Payload)
 
 void UT_Grab::HandleJump(FGameplayEventData Payload)
 {
-	if (!IsValid(GrabComponent) || !GrabComponent->IsGrabbed()) return;
+	if (!IsValid(GrabComponent) || !GrabComponent->IsGrabbed() || !GrabComponent->CanMove()) return;
 	if (GrabComponent->IsOnBar()) GrabComponent->BarJump();
 	else GrabComponent->LedgeJump();
 }

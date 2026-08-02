@@ -10,6 +10,7 @@ namespace TTags
 	namespace State
 	{
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.State.LockOn", "角色正在锁定敌人");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Aiming, "TTags.State.Aiming", "角色正在瞄准");
 		
 		namespace Action
 		{
@@ -22,6 +23,7 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(HitReact, "TTags.State.Action.HitReact", "角色正在播放受击反应");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Casting, "TTags.State.Action.Casting", "角色正在施法或释放技能");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(ComboWindow, "TTags.State.Action.ComboWindow", "连击输入窗口");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Shooting, "TTags.State.Action.Shooting", "角色正在执行射击动作");
 		}
 
 		namespace Grab
@@ -54,6 +56,8 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Roll, "TTags.TAbilities.Roll", "翻滚标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Traversal, "TTags.TAbilities.Traversal", "翻越能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Grab, "TTags.TAbilities.Grab", "抓握能力标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Aim, "TTags.TAbilities.Aim", "瞄准能力标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Shoot, "TTags.TAbilities.Shoot", "射击能力标签");
 		
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.TAbilities.LockOn", "锁定敌人能力");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.TAbilities.SwitchLockOnTargetLeft", "向左切换锁定目标");
@@ -94,6 +98,11 @@ namespace TTags
 				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Release, "TTags.Events.Player.Grab.Release", "松开抓握事件");
 				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Move, "TTags.Events.Player.Grab.Move", "抓握侧移事件");
 				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Jump, "TTags.Events.Player.Grab.Jump", "抓握跳跃事件");
+			}
+
+			namespace Shoot
+			{
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Fire, "TTags.Events.Player.Shoot.Fire", "射击动画的实际开火事件");
 			}
 		}
 		namespace Enemy

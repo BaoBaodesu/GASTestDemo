@@ -13,6 +13,7 @@ namespace TTags
 	namespace State
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(LockOn);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Aiming);
 		
 		namespace Action
 		{
@@ -25,6 +26,7 @@ namespace TTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(HitReact);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Casting);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(ComboWindow);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shooting);
 		}
 
 		namespace Grab
@@ -56,6 +58,8 @@ namespace TTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Roll);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Traversal);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Grab);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Aim);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shoot);
 		
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(LockOn);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(SwitchLockOnTargetLeft);
@@ -95,6 +99,11 @@ namespace TTags
 				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Release);
 				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Move);
 				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Jump);
+			}
+
+			namespace Shoot
+			{
+				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Fire);
 			}
 		}
 		namespace Enemy

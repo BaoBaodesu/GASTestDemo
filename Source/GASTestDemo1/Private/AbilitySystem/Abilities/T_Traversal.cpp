@@ -12,7 +12,8 @@
 UT_Traversal::UT_Traversal()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	AbilityTags.AddTag(TTags::TAbilities::Traversal);
+	SetAssetTags(FGameplayTagContainer(TTags::TAbilities::Traversal.GetTag()));
+	CancelAbilitiesWithTag.AddTag(TTags::TAbilities::Aim);
 }
 
 bool UT_Traversal::CanActivateAbility(

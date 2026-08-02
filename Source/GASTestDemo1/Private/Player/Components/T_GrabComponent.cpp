@@ -259,7 +259,7 @@ void UT_GrabComponent::Shimmy(float Direction)
 
 void UT_GrabComponent::LedgeJump()
 {
-	if (!HasValidCharacter() || !bGrabbed || IsOnBar() || !IsValid(MotionWarpingComponent) || !IsValid(LedgeClimbMontage)) return;
+	if (!HasValidCharacter() || !bGrabbed || !bCanMove || GrabState != ET_GrabState::Hanging || IsOnBar() || !IsValid(MotionWarpingComponent) || !IsValid(LedgeClimbMontage)) return;
 
 	bCanMove = false;
 	ShimmyDirection = 0.0f;
@@ -274,7 +274,7 @@ void UT_GrabComponent::LedgeJump()
 	UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance();
 	if (!IsValid(AnimInstance)) { DetachInternal(); return; }
 
-	AnimInstance->Montage_Play(LedgeClimbMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
+	if (AnimInstance->Montage_Play(LedgeClimbMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true) <= 0.0f) { DetachInternal(); return; }
 	FOnMontageEnded MontageEndedDelegate;
 	MontageEndedDelegate.BindUObject(this, &ThisClass::OnLedgeClimbMontageEnded);
 	AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, LedgeClimbMontage);
@@ -288,7 +288,7 @@ void UT_GrabComponent::OnLedgeClimbMontageEnded(UAnimMontage* Montage, bool bInt
 
 void UT_GrabComponent::BarJump()
 {
-	if (!HasValidCharacter() || !bGrabbed || !IsOnBar()) return;
+	if (!HasValidCharacter() || !bGrabbed || !bCanMove || GrabState != ET_GrabState::Hanging || !IsOnBar()) return;
 
 	bCanMove = false;
 	ShimmyDirection = 0.0f;

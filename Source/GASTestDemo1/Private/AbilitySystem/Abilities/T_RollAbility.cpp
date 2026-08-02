@@ -20,6 +20,7 @@ UT_RollAbility::UT_RollAbility()
 	SetAssetTags(FGameplayTagContainer(TTags::TAbilities::Roll.GetTag()));
 	ActivationOwnedTags.AddTag(TTags::State::Action::Busy);
 	ActivationOwnedTags.AddTag(TTags::State::Action::Rolling);
+	CancelAbilitiesWithTag.AddTag(TTags::TAbilities::Aim);
 }
 
 void UT_RollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,

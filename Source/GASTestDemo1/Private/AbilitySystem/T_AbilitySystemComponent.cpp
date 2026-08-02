@@ -70,13 +70,15 @@ void UT_AbilitySystemComponent::HandleAutoActivatedAbility(const FGameplayAbilit
 void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
+	FGameplayTag RoutedInputTag = InputTag;
+	if (InputTag.MatchesTagExact(TTags::TAbilities::Primary) && HasMatchingGameplayTag(TTags::State::Aiming)) RoutedInputTag = TTags::TAbilities::Shoot;
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (!AbilitySpec.Ability) continue;
+		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(RoutedInputTag)) continue;
 
-		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(InputTag)) continue;
-
+		AbilitySpec.InputPressed = true;
 		if (AbilitySpec.IsActive())
 		{
 			AbilitySpecInputPressed(AbilitySpec);
@@ -84,6 +86,28 @@ void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 		else
 		{
 			TryActivateAbility(AbilitySpec.Handle);
+		}
+	}
+}
+
+void UT_AbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid()) return;
+
+	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+	{
+		if (!AbilitySpec.Ability) continue;
+		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(InputTag)) continue;
+		AbilitySpec.InputPressed = false;
+		if (AbilitySpec.IsActive())
+		{
+			AbilitySpecInputReleased(AbilitySpec);
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+			TArray<UGameplayAbility*> AbilityInstances = AbilitySpec.GetAbilityInstances();
+			const FGameplayAbilityActivationInfo& ActivationInfo = AbilityInstances.IsEmpty() ? AbilitySpec.ActivationInfo : AbilityInstances.Last()->GetCurrentActivationInfoRef();
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+			InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, AbilitySpec.Handle, ActivationInfo.GetActivationPredictionKey());
 		}
 	}
 }

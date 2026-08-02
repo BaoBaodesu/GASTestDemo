@@ -8,11 +8,14 @@
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Player/Components/T_LockOnComponent.h"
 #include "Player/T_PlayerState.h"
+#include "Player/Components/T_AimingComponent.h"
 #include "Player/Components/T_GrabComponent.h"
+#include "Player/Components/T_PickUpComponent.h"
 #include "Player/Components/T_TraversalComponent.h"
 
 
@@ -51,7 +54,9 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	LockOnComponent = CreateDefaultSubobject<UT_LockOnComponent>(TEXT("LockOnComponent"));
 	TraversalComponent = CreateDefaultSubobject<UT_TraversalComponent>(TEXT("TraversalComponent"));
 	GrabComponent = CreateDefaultSubobject<UT_GrabComponent>(TEXT("GrabComponent"));
+	AimingComponent = CreateDefaultSubobject<UT_AimingComponent>(TEXT("AimingComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+	PickUpComponent = CreateDefaultSubobject<UT_PickUpComponent>(TEXT("PickUpComponent"));
 }
 
 
@@ -70,6 +75,32 @@ UAttributeSet* AT_PlayerCharacter::GetAttributeSet() const
 	if (!IsValid(TPlayerState)) return nullptr;
 	
 	return TPlayerState->GetAttributeSet();
+}
+
+USkeletalMeshComponent* AT_PlayerCharacter::GetEquippedWeaponMesh() const
+{
+	if (IsValid(EquippedWeaponMesh)) return EquippedWeaponMesh;
+
+	TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+	GetComponents(SkeletalMeshComponents);
+	for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+	{
+		if (IsValid(SkeletalMeshComponent) && SkeletalMeshComponent != GetMesh() && SkeletalMeshComponent->DoesSocketExist(TEXT("Muzzle"))) return SkeletalMeshComponent;
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (!IsValid(AttachedActor)) continue;
+		SkeletalMeshComponents.Reset();
+		AttachedActor->GetComponents(SkeletalMeshComponents);
+		for (USkeletalMeshComponent* SkeletalMeshComponent : SkeletalMeshComponents)
+		{
+			if (IsValid(SkeletalMeshComponent) && SkeletalMeshComponent->DoesSocketExist(TEXT("Muzzle"))) return SkeletalMeshComponent;
+		}
+	}
+	return nullptr;
 }
 
 void AT_PlayerCharacter::PossessedBy(AController* NewController)

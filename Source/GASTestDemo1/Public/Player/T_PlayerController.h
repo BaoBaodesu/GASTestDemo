@@ -22,7 +22,7 @@ public:
 	FVector2D MovementVector;
 protected:
 	virtual void SetupInputComponent() override;
-	
+
 private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input")
@@ -48,6 +48,9 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	TObjectPtr<UInputAction> RollAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	TObjectPtr<UInputAction> AimAction;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* LockOnAction;
@@ -60,6 +63,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* ReleaseAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	TObjectPtr<UInputAction> PickUpAction;
 
 	void Jump();
 	void StopJumping();
@@ -71,7 +77,11 @@ private:
 	void Tertiary();
 	void StandingDodge();
 	void Roll();
+	void StartAim();
+	void StopAim();
+	void PickUp();
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
+	void ReleaseAbility(const FGameplayTag& AbilityTag) const;
 	bool IsAlive() const;
 	void StartLockOn();
 	void SwitchLockOnTarget(const FInputActionValue& Value);

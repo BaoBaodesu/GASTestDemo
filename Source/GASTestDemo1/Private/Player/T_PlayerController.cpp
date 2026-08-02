@@ -9,9 +9,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Characters/T_BaseCharacter.h"
+#include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameplayTags/TTags.h"
 #include "Player/Components/T_LockOnComponent.h"
+#include "Player/Components/T_PickUpComponent.h"
 #include "Player/Components/T_TraversalComponent.h"
 
 void AT_PlayerController::SetupInputComponent()
@@ -40,12 +42,23 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(TertiaryAction, ETriggerEvent::Started, this, &ThisClass::Tertiary);
 	EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ThisClass::Roll);
 	
+	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ThisClass::StartAim);
+
 	EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &ThisClass::StartLockOn);
 	EnhancedInputComponent->BindAction(SwitchLockOnAction, ETriggerEvent::Started, this, &ThisClass::SwitchLockOnTarget);
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Started, this, &ThisClass::StartCatch);
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Completed, this, &ThisClass::StopCatch);
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Canceled, this, &ThisClass::StopCatch);
 	EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ThisClass::ReleaseGrab);
+	EnhancedInputComponent->BindAction(PickUpAction, ETriggerEvent::Started, this, &ThisClass::PickUp);
+}
+
+void AT_PlayerController::PickUp()
+{
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter) || !IsValid(PlayerCharacter->GetPickUpComponent())) return;
+
+	PlayerCharacter->GetPickUpComponent()->TryPickUp();
 }
 
 void AT_PlayerController::Jump()
@@ -132,6 +145,20 @@ void AT_PlayerController::Roll()
 	ActivateAbility(TTags::TAbilities::Roll);
 }
 
+void AT_PlayerController::StartAim()
+{
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
+	if (!IsValid(ASC)) return;
+	if (ASC->HasMatchingGameplayTag(TTags::State::Aiming)) { StopAim(); return; }
+
+	ActivateAbility(TTags::TAbilities::Aim);
+}
+
+void AT_PlayerController::StopAim()
+{
+	ReleaseAbility(TTags::TAbilities::Aim);
+}
+
 void AT_PlayerController::ActivateAbility(const FGameplayTag& AbilityTag) const
 {
 	if (!IsAlive()) return;
@@ -183,6 +210,13 @@ void AT_PlayerController::SwitchLockOnTarget(const FInputActionValue& Value)
 	UAbilitySystemComponent* ASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
 	if (!IsValid(ASC)) return;	
 	ASC->TryActivateAbilitiesByTag(AbilityTags);
+}
+
+void AT_PlayerController::ReleaseAbility(const FGameplayTag& AbilityTag) const
+{
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetPawn());
+	if (!IsValid(ASC)) return;
+	if (UT_AbilitySystemComponent* T_ASC = Cast<UT_AbilitySystemComponent>(ASC)) T_ASC->AbilityInputTagReleased(AbilityTag);
 }
 
 void AT_PlayerController::StartCatch()
