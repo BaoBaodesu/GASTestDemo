@@ -2,15 +2,15 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameObjects/T_PlayerProjectile.h"
+#include "GameObjects/T_ProjectileShooterComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
-#include "NiagaraComponent.h"
-#include "NiagaraFunctionLibrary.h"
 #include "Player/Components/T_AimingComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 UT_Shoot::UT_Shoot()
 {
@@ -18,6 +18,9 @@ UT_Shoot::UT_Shoot()
 	SetAssetTags(FGameplayTagContainer(TTags::TAbilities::Shoot.GetTag()));
 	ActivationRequiredTags.AddTag(TTags::State::Aiming);
 	ActivationOwnedTags.AddTag(TTags::State::Action::Shooting);
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> FireMontageAsset(TEXT("/Game/Characters/Mannequins/Anims/Pistol/MM_Pistol_Fire_Montage.MM_Pistol_Fire_Montage"));
+	FireMontage = FireMontageAsset.Object;
 }
 
 void UT_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -30,8 +33,13 @@ void UT_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 
 	AimingComponent = PlayerCharacter->FindComponentByClass<UT_AimingComponent>();
 	WeaponMesh = PlayerCharacter->GetEquippedWeaponMesh();
-	if (!IsValid(AimingComponent) || !IsValid(WeaponMesh) || !IsValid(FireMontage)) { UE_LOG(LogTemp, Warning, TEXT("T_Shoot prerequisites: AimingComponent=%s, WeaponMesh=%s, FireMontage=%s."), IsValid(AimingComponent) ? TEXT("Valid") : TEXT("Invalid"), IsValid(WeaponMesh) ? TEXT("Valid") : TEXT("Invalid"), IsValid(FireMontage) ? TEXT("Valid") : TEXT("Invalid")); EndAbility(Handle, ActorInfo, ActivationInfo, true, true); return; }
-	if (!WeaponMesh->DoesSocketExist(MuzzleSocketName)) { UE_LOG(LogTemp, Warning, TEXT("T_Shoot could not find muzzle socket '%s'."), *MuzzleSocketName.ToString()); EndAbility(Handle, ActorInfo, ActivationInfo, true, true); return; }
+	ProjectileShooterComponent = IsValid(WeaponMesh) && IsValid(WeaponMesh->GetOwner()) ? WeaponMesh->GetOwner()->FindComponentByClass<UT_ProjectileShooterComponent>() : nullptr;
+	if (!IsValid(AimingComponent) || !IsValid(WeaponMesh) || !IsValid(ProjectileShooterComponent) || !IsValid(ProjectileClass) || !IsValid(FireMontage))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("T_Shoot prerequisites: AimingComponent=%s, WeaponMesh=%s, ProjectileShooterComponent=%s, ProjectileClass=%s, FireMontage=%s."), IsValid(AimingComponent) ? TEXT("Valid") : TEXT("Invalid"), IsValid(WeaponMesh) ? TEXT("Valid") : TEXT("Invalid"), IsValid(ProjectileShooterComponent) ? TEXT("Valid") : TEXT("Invalid"), IsValid(ProjectileClass) ? TEXT("Valid") : TEXT("Invalid"), IsValid(FireMontage) ? TEXT("Valid") : TEXT("Invalid"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
 	bShotExecuted = true;
 	ExecuteShot();
@@ -57,47 +65,14 @@ void UT_Shoot::OnFireEvent(FGameplayEventData Payload)
 
 void UT_Shoot::ExecuteShot()
 {
-	if (!IsValid(AimingComponent) || !IsValid(WeaponMesh)) return;
+	if (!IsValid(AimingComponent) || !IsValid(ProjectileShooterComponent) || !IsValid(ProjectileClass)) return;
 
 	FVector AimPoint;
 	FHitResult CameraHit;
 	if (!AimingComponent->GetCameraAimPoint(AimPoint, CameraHit)) return;
-
-	UWorld* World = GetWorld();
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (!IsValid(World) || !IsValid(AvatarActor)) return;
-
-	const FVector MuzzleLocation = WeaponMesh->GetSocketTransform(MuzzleSocketName, RTS_World).GetLocation();
-	const FVector AimDirection = (AimPoint - MuzzleLocation).GetSafeNormal();
-	if (AimDirection.IsNearlyZero()) return;
-	const FVector TraceEnd = AimPoint;
-
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(TShootMuzzleTrace), true, AvatarActor);
-	if (IsValid(WeaponMesh->GetOwner()) && WeaponMesh->GetOwner() != AvatarActor) QueryParams.AddIgnoredActor(WeaponMesh->GetOwner());
-	FHitResult HitResult;
-	const bool bHit = World->LineTraceSingleByChannel(HitResult, MuzzleLocation, TraceEnd, TraceChannel, QueryParams);
-	const FVector FinalPoint = bHit ? HitResult.ImpactPoint : AimPoint;
-	const FVector ShotDirection = (FinalPoint - MuzzleLocation).GetSafeNormal();
-
-	if (IsValid(MuzzleSystem)) UNiagaraFunctionLibrary::SpawnSystemAttached(MuzzleSystem, WeaponMesh, MuzzleSocketName, FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true, true, ENCPoolMethod::AutoRelease, true);
-	if (IsValid(TracerSystem))
-	{
-		UNiagaraComponent* TracerComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, TracerSystem, MuzzleLocation, FRotator::ZeroRotator, FVector::OneVector, true, false, ENCPoolMethod::AutoRelease, true);
-		if (IsValid(TracerComponent)) { TracerComponent->SetVariablePosition(TracerStartParameter, MuzzleLocation); TracerComponent->SetVariablePosition(TracerEndParameter, FinalPoint); TracerComponent->Activate(true); }
-	}
-	if (bHit && IsValid(ImpactSystem)) UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactSystem, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation(), FVector::OneVector, true, true, ENCPoolMethod::AutoRelease, true);
-
-	if (!bHit || !IsValid(HitResult.GetActor()) || !IsValid(DamageEffectClass) || Damage <= 0.f) return;
-	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitResult.GetActor());
-	if (!IsValid(SourceASC) || !IsValid(TargetASC)) return;
-
-	FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
-	ContextHandle.AddHitResult(HitResult, true);
-	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), ContextHandle);
-	if (!SpecHandle.IsValid()) return;
-	SpecHandle.Data->SetSetByCallerMagnitude(TTags::SetByCaller::Projectile, Damage);
-	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	if (!IsValid(AvatarActor)) return;
+	ProjectileShooterComponent->FireProjectile(AimPoint, ProjectileClass, DamageEffectClass, Damage, AvatarActor);
 }
 
 void UT_Shoot::OnMontageCompleted()
@@ -127,6 +102,7 @@ void UT_Shoot::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamepl
 	MontageTask = nullptr;
 	AimingComponent = nullptr;
 	WeaponMesh = nullptr;
+	ProjectileShooterComponent = nullptr;
 	bShotExecuted = false;
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

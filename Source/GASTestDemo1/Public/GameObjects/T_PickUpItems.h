@@ -4,24 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Inventory/T_ItemDefinition.h"
 #include "T_PickUpItems.generated.h"
 
-class USceneComponent;
+class UBoxComponent;
+class UPrimitiveComponent;
 class USphereComponent;
 class UStaticMeshComponent;
 class USkeletalMeshComponent;
-class UTexture2D;
-
-UENUM(BlueprintType)
-enum class ETPickUpItemType : uint8
-{
-	Consumable,
-	Weapon,
-	Ammo,
-	Material,
-	Quest,
-	Misc
-};
 
 USTRUCT(BlueprintType)
 struct FTPickUpItemData
@@ -29,29 +19,14 @@ struct FTPickUpItemData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	FName ItemId = NAME_None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	FText DisplayName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	ETPickUpItemType ItemType = ETPickUpItemType::Misc;
+	TObjectPtr<UT_ItemDefinition> ItemDefinition = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", meta=(ClampMin="1"))
 	int32 Quantity = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	bool bStackable = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item", meta=(ClampMin="1", EditCondition="bStackable"))
-	int32 MaxStackSize = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item")
-	TObjectPtr<UTexture2D> Icon = nullptr;
-
 	bool IsValid() const
 	{
-		return !ItemId.IsNone() && Quantity > 0;
+		return ::IsValid(ItemDefinition) && Quantity > 0;
 	}
 };
 
@@ -70,6 +45,7 @@ public:
 	AT_PickUpItems();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintPure, Category="Pick Up")
 	const FTPickUpItemData& GetItemData() const
@@ -78,7 +54,25 @@ public:
 	}
 
 	UFUNCTION(BlueprintPure, Category="Pick Up")
+	UT_ItemDefinition* GetItemDefinition() const { return ItemData.ItemDefinition; }
+
+	UFUNCTION(BlueprintPure, Category="Pick Up")
+	int32 GetQuantity() const { return ItemData.Quantity; }
+
+	UFUNCTION(BlueprintCallable, Category="Pick Up")
+	void SetItemDefinition(UT_ItemDefinition* InItemDefinition);
+
+	UFUNCTION(BlueprintCallable, Category="Pick Up")
+	void SetQuantity(int32 InQuantity);
+
+	UFUNCTION(BlueprintCallable, Category="Pick Up")
+	bool ConsumeQuantity(AActor* Picker, int32 ConsumedQuantity);
+
+	UFUNCTION(BlueprintPure, Category="Pick Up")
 	bool CanBePickedUp(AActor* Picker) const;
+
+	bool IsPhysicalCollisionComponent(const UPrimitiveComponent* Component) const;
+	void SetFocused(bool bFocused);
 
 	UFUNCTION(BlueprintCallable, Category="Pick Up")
 	bool PickUp(AActor* Picker);
@@ -87,8 +81,11 @@ public:
 	FTPickUpItemPickedUpSignature OnPickedUp;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Physics", meta=(ClampMin="0.1"))
+	FVector PhysicsBoxExtent = FVector(15.f, 8.f, 5.f);
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<USceneComponent> SceneRoot;
+	TObjectPtr<UBoxComponent> PhysicsRoot;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<USphereComponent> InteractionSphere;

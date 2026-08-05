@@ -2,16 +2,16 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/T_GameplayAbility.h"
-#include "Engine/EngineTypes.h"
 #include "T_Shoot.generated.h"
 
+class AT_PlayerProjectile;
 class UAbilityTask_PlayMontageAndWait;
 class UAbilityTask_WaitGameplayEvent;
 class UAnimMontage;
 class UGameplayEffect;
-class UNiagaraSystem;
 class USkeletalMeshComponent;
 class UT_AimingComponent;
+class UT_ProjectileShooterComponent;
 
 UCLASS()
 class GASTESTDEMO1_API UT_Shoot : public UT_GameplayAbility
@@ -47,35 +47,17 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Shoot|Damage")
 	float Damage{10.f};
 
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Trace")
-	float TraceDistance{10000.f};
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Trace")
-	TEnumAsByte<ECollisionChannel> TraceChannel{ECC_Visibility};
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Weapon")
-	FName MuzzleSocketName{TEXT("Muzzle")};
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Niagara")
-	TObjectPtr<UNiagaraSystem> MuzzleSystem;
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Niagara")
-	TObjectPtr<UNiagaraSystem> TracerSystem;
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Niagara")
-	TObjectPtr<UNiagaraSystem> ImpactSystem;
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Niagara")
-	FName TracerStartParameter{TEXT("User.Start")};
-
-	UPROPERTY(EditDefaultsOnly, Category="Shoot|Niagara")
-	FName TracerEndParameter{TEXT("User.End")};
+	UPROPERTY(EditDefaultsOnly, Category="Shoot|Projectile")
+	TSubclassOf<AT_PlayerProjectile> ProjectileClass;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UT_AimingComponent> AimingComponent;
 
 	UPROPERTY(Transient)
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UT_ProjectileShooterComponent> ProjectileShooterComponent;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> FireEventTask;

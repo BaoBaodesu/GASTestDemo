@@ -13,9 +13,9 @@
 #include "GameplayTags/TTags.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "GameObjects/T_PickUpItems.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
-#include "UObject/UnrealType.h"
 
 UT_AimingComponent::UT_AimingComponent()
 {
@@ -77,11 +77,13 @@ void UT_AimingComponent::StartAiming()
 	bCachedOrientRotationToMovement = MovementComponent->bOrientRotationToMovement;
 	bCachedUseControllerDesiredRotation = MovementComponent->bUseControllerDesiredRotation;
 	bCachedUseControllerRotationYaw = Character->bUseControllerRotationYaw;
+	CachedMaxWalkSpeed = MovementComponent->MaxWalkSpeed;
 	bHasCachedMovementSettings = true;
 	bAiming = true;
 	UpdateAnimationState();
 	MovementComponent->bOrientRotationToMovement = false;
 	MovementComponent->bUseControllerDesiredRotation = false;
+	MovementComponent->MaxWalkSpeed = AimingMaxWalkSpeed;
 	Character->bUseControllerRotationYaw = false;
 	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::ShowCrosshair);
 }
@@ -98,16 +100,6 @@ void UT_AimingComponent::StopAiming()
 void UT_AimingComponent::UpdateAnimationState()
 {
 	if (!IsValid(Character)) return;
-
-	if (FBoolProperty* AimingProperty = FindFProperty<FBoolProperty>(Character->GetClass(), TEXT("BPAiming"))) AimingProperty->SetPropertyValue_InContainer(Character, bAiming);
-	AnimInstance = IsValid(Character->GetMesh()) ? Character->GetMesh()->GetAnimInstance() : nullptr;
-	if (!IsValid(AnimInstance)) return;
-
-	if (FBoolProperty* AimingProperty = FindFProperty<FBoolProperty>(AnimInstance->GetClass(), TEXT("BPAiming"))) AimingProperty->SetPropertyValue_InContainer(AnimInstance, bAiming);
-	if (const FBoolProperty* CharacterHasPistolProperty = FindFProperty<FBoolProperty>(Character->GetClass(), TEXT("BPHasPistolGun")))
-	{
-		if (FBoolProperty* AnimHasPistolProperty = FindFProperty<FBoolProperty>(AnimInstance->GetClass(), TEXT("BPHasPistolGun"))) AnimHasPistolProperty->SetPropertyValue_InContainer(AnimInstance, CharacterHasPistolProperty->GetPropertyValue_InContainer(Character));
-	}
 
 	if (UFunction* AnimationFunction = Character->FindFunction(bAiming ? TEXT("AimFoward") : TEXT("StopAimingFoward"))) Character->ProcessEvent(AnimationFunction, nullptr);
 }
@@ -143,6 +135,7 @@ void UT_AimingComponent::RestoreMovementSettings()
 	if (!bHasCachedMovementSettings || !IsValid(Character) || !IsValid(MovementComponent)) return;
 	MovementComponent->bOrientRotationToMovement = bCachedOrientRotationToMovement;
 	MovementComponent->bUseControllerDesiredRotation = bCachedUseControllerDesiredRotation;
+	MovementComponent->MaxWalkSpeed = CachedMaxWalkSpeed;
 	Character->bUseControllerRotationYaw = bCachedUseControllerRotationYaw;
 	bHasCachedMovementSettings = false;
 }
@@ -170,7 +163,23 @@ bool UT_AimingComponent::GetCameraAimPoint(FVector& OutAimPoint, FHitResult& Out
 	const FVector TraceStart = WorldLocation + WorldDirection * CameraTraceStartOffset;
 	const FVector TraceEnd = TraceStart + WorldDirection * TraceDistance;
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(TAimingCameraTrace), true, Character);
-	const bool bHit = World->LineTraceSingleByChannel(OutCameraHit, TraceStart, TraceEnd, TraceChannel, QueryParams);
+	bool bHit = false;
+	for (int32 TraceIndex = 0; TraceIndex < 16; ++TraceIndex)
+	{
+		FHitResult CandidateHit;
+		if (!World->LineTraceSingleByChannel(CandidateHit, TraceStart, TraceEnd, TraceChannel, QueryParams)) break;
+
+		const AT_PickUpItems* PickUpItem = Cast<AT_PickUpItems>(CandidateHit.GetActor());
+		if (IsValid(PickUpItem) && !PickUpItem->IsPhysicalCollisionComponent(CandidateHit.GetComponent()))
+		{
+			QueryParams.AddIgnoredComponent(CandidateHit.GetComponent());
+			continue;
+		}
+
+		OutCameraHit = CandidateHit;
+		bHit = true;
+		break;
+	}
 	OutAimPoint = bHit ? OutCameraHit.ImpactPoint : TraceEnd;
 	if (bDrawDebug) DrawDebugLine(World, TraceStart, OutAimPoint, bHit ? FColor::Cyan : FColor::Blue, false, DebugDrawTime, 0, 1.f);
 	return true;

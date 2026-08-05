@@ -21,12 +21,17 @@ public class GASTestDemo1 : ModuleRules
 			"UMG",
 			"AIModule",
 			"Niagara",
-			"MotionWarping"
+			"MotionWarping",
+			"AnimGraphRuntime"
 		});
 		
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "Kismet", "BlueprintGraph", "UMGEditor" });
+		}
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");

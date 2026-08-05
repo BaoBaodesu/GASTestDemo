@@ -31,6 +31,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Aiming")
 	bool IsAiming() const { return bAiming; }
 
+	UFUNCTION(BlueprintPure, Category="Aiming|Input")
+	float GetLookInputMultiplier() const { return bAiming ? AimingMouseSpeedMultiplier : 1.f; }
+
 	UFUNCTION(BlueprintCallable, Category="Aiming")
 	bool GetCameraAimPoint(FVector& OutAimPoint, FHitResult& OutCameraHit) const;
 
@@ -51,25 +54,31 @@ private:
 	TObjectPtr<UUserWidget> CrosshairWidget;
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Camera", meta=(ClampMin="0.0"))
-	float AimingArmLength{300.f};
+	float AimingArmLength{120.f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Camera")
-	FVector AimingSocketOffset{140.f, 65.f, 30.f};
+	FVector AimingSocketOffset{0.f, 40.f, -25.f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Camera", meta=(ClampMin="5.0", ClampMax="170.0"))
-	float AimingFOV{70.f};
+	float AimingFOV{40.f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Camera", meta=(ClampMin="0.01"))
-	float CameraInterpSpeed{8.f};
+	float CameraInterpSpeed{10.f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Rotation")
 	bool bRotateCharacterWhileAiming{true};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Rotation")
-	float AimingYawOffset{8.f};
+	float AimingYawOffset{0.f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Rotation", meta=(ClampMin="0.01"))
 	float CharacterRotationInterpSpeed{12.f};
+
+	UPROPERTY(EditAnywhere, Category="Aiming|Movement", meta=(ClampMin="0.0"))
+	float AimingMaxWalkSpeed{150.f};
+
+	UPROPERTY(EditAnywhere, Category="Aiming|Input", meta=(ClampMin="0.0"))
+	float AimingMouseSpeedMultiplier{0.5f};
 
 	UPROPERTY(EditAnywhere, Category="Aiming|Trace", meta=(ClampMin="1.0"))
 	float TraceDistance{10000.f};
@@ -104,6 +113,7 @@ private:
 	float NormalArmLength{0.f};
 	float NormalFOV{90.f};
 	FVector NormalSocketOffset{FVector::ZeroVector};
+	float CachedMaxWalkSpeed{0.f};
 	bool bAiming{false};
 	bool bHasCachedMovementSettings{false};
 	bool bCachedOrientRotationToMovement{true};

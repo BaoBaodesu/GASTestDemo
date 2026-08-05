@@ -8,17 +8,29 @@
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "InputAction.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameplayTags/TTags.h"
+#include "Player/Components/T_AimingComponent.h"
 #include "Player/Components/T_LockOnComponent.h"
 #include "Player/Components/T_PickUpComponent.h"
 #include "Player/Components/T_TraversalComponent.h"
+#include "Inventory/T_InventoryComponent.h"
+#include "UI/Inventory/T_InventoryWidgets.h"
 
 void AT_PlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+	if (!IsValid(InventoryAction))
+	{
+		InventoryAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Backpack.IA_Backpack"));
+	}
+	if (!IsValid(PickUpAction))
+	{
+		PickUpAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Interactive.IA_Interactive"));
+	}
 	
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
 	if (!IsValid(InputSubsystem)) return;
@@ -51,6 +63,50 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Canceled, this, &ThisClass::StopCatch);
 	EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ThisClass::ReleaseGrab);
 	EnhancedInputComponent->BindAction(PickUpAction, ETriggerEvent::Started, this, &ThisClass::PickUp);
+	if (IsValid(InventoryAction)) EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &ThisClass::ToggleInventory);
+	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
+	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
+	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
+	InputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
+}
+
+void AT_PlayerController::ToggleInventory()
+{
+	if (IsValid(InventoryWidget)) CloseInventory();
+	else OpenInventory();
+}
+
+void AT_PlayerController::OpenInventory(UT_InventoryComponent* StorageInventory)
+{
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter) || !IsValid(PlayerCharacter->GetInventoryComponent()) || !IsValid(InventoryWidgetClass)) return;
+
+	if (!IsValid(InventoryWidget))
+	{
+		InventoryWidget = CreateWidget<UT_InventoryWidget>(this, InventoryWidgetClass);
+		if (!IsValid(InventoryWidget)) return;
+		InventoryWidget->AddToViewport();
+	}
+
+	InventoryWidget->InitializeInventory(PlayerCharacter->GetInventoryComponent(), StorageInventory);
+	bWasMouseCursorVisible = bShowMouseCursor;
+	bShowMouseCursor = true;
+
+	FInputModeGameAndUI InputMode;
+	InputMode.SetWidgetToFocus(InventoryWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	InventoryWidget->SetKeyboardFocus();
+}
+
+void AT_PlayerController::CloseInventory()
+{
+	if (!IsValid(InventoryWidget)) return;
+
+	InventoryWidget->RemoveFromParent();
+	InventoryWidget = nullptr;
+	bShowMouseCursor = bWasMouseCursorVisible;
+	SetInputMode(FInputModeGameOnly());
 }
 
 void AT_PlayerController::PickUp()
@@ -59,6 +115,15 @@ void AT_PlayerController::PickUp()
 	if (!IsValid(PlayerCharacter) || !IsValid(PlayerCharacter->GetPickUpComponent())) return;
 
 	PlayerCharacter->GetPickUpComponent()->TryPickUp();
+}
+
+void AT_PlayerController::ActivateQuickSlot(FKey Key)
+{
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter) || !IsValid(PlayerCharacter->GetInventoryComponent())) return;
+
+	const int32 QuickSlotIndex = Key == EKeys::One ? 0 : Key == EKeys::Two ? 1 : Key == EKeys::Three ? 2 : Key == EKeys::Four ? 3 : INDEX_NONE;
+	if (QuickSlotIndex != INDEX_NONE) PlayerCharacter->GetInventoryComponent()->ActivateQuickSlot(QuickSlotIndex);
 }
 
 void AT_PlayerController::Jump()
@@ -115,13 +180,16 @@ void AT_PlayerController::StopMove()
 void AT_PlayerController::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+	const UT_AimingComponent* AimingComponent = IsValid(GetPawn()) ? GetPawn()->FindComponentByClass<UT_AimingComponent>() : nullptr;
+	const float LookInputMultiplier = IsValid(AimingComponent) ? AimingComponent->GetLookInputMultiplier() : 1.f;
 
-	AddYawInput(LookAxisVector.X);
-	AddPitchInput(LookAxisVector.Y);
+	AddYawInput(LookAxisVector.X * LookInputMultiplier);
+	AddPitchInput(LookAxisVector.Y * LookInputMultiplier);
 }
 
 void AT_PlayerController::Primary()
 {
+	if (IsValid(InventoryWidget)) return;
 	ActivateAbility(TTags::TAbilities::Primary);
 }
 

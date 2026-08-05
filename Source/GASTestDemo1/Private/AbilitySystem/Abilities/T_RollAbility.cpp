@@ -34,6 +34,12 @@ void UT_RollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
+	{
+		const FGameplayTagContainer AimAbilityTag(TTags::TAbilities::Aim.GetTag());
+		AbilitySystemComponent->CancelAbilities(&AimAbilityTag, nullptr, this);
+	}
 	
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	APawn* AvatarPawn = Cast<APawn>(AvatarActor);

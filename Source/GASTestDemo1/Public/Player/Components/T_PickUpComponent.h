@@ -11,6 +11,7 @@
 class AT_PickUpItems;
 class UAnimInstance;
 class UAnimMontage;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 	FTItemPickedUpSignature,
@@ -44,6 +45,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pick Up|Trace", meta=(ClampMin="1.0"))
 	float TraceDistance = 250.f;
@@ -60,6 +62,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pick Up|Animation")
 	FName PickUpNotifyName = TEXT("PickUp");
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pick Up|Sound")
+	TObjectPtr<USoundBase> PickUpSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Pick Up|Focus", meta=(ClampMin="1.0"))
+	float FocusDistance = 350.f;
+
 private:
 	bool GetViewPoint(FVector& ViewLocation, FRotator& ViewRotation) const;
 
@@ -70,6 +78,8 @@ private:
 	bool ValidatePickUpItem(const AT_PickUpItems* Item) const;
 
 	void ResetPickUpState();
+	void UpdateFocusedItem();
+	void SetFocusedItem(AT_PickUpItems* Item);
 
 	UAnimInstance* GetAnimInstance() const;
 
@@ -83,6 +93,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AT_PickUpItems> PendingItem;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AT_PickUpItems> FocusedItem;
 
 	bool bPickUpInProgress = false;
 };

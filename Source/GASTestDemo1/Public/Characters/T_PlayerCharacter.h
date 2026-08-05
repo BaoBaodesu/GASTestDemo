@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "T_BaseCharacter.h"
+#include "Inventory/T_InventoryItemHandler.h"
 #include "T_PlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -14,9 +15,11 @@ class UT_AimingComponent;
 class UMotionWarpingComponent;
 class USkeletalMeshComponent;
 class UT_PickUpComponent;
+class UT_InventoryComponent;
+class UT_ItemDefinition;
 
 UCLASS()
-class GASTESTDEMO1_API AT_PlayerCharacter : public AT_BaseCharacter
+class GASTESTDEMO1_API AT_PlayerCharacter : public AT_BaseCharacter, public IT_InventoryItemHandler
 {
 	GENERATED_BODY()
 
@@ -39,7 +42,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SetEquippedWeaponMesh(USkeletalMeshComponent* InWeaponMesh) { EquippedWeaponMesh = InWeaponMesh; }
 
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	bool bHasPistolGun{false};
+
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	bool HasPistolGun() const { return bHasPistolGun; }
+
 	UT_PickUpComponent* GetPickUpComponent() const { return PickUpComponent; }
+
+	UFUNCTION(BlueprintPure, Category="Inventory")
+	UT_InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
+	virtual bool CanUseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
+	virtual bool UseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
+	virtual bool CanEquipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
+	virtual bool EquipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
+	virtual bool UnequipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
 
 	bool bPreviousCameraCollisionEnabled = true;
 	bool bTraversalCameraModeActive = false;
@@ -70,5 +88,11 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UT_PickUpComponent> PickUpComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UT_InventoryComponent> InventoryComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> EquippedInventoryActor;
 
 };

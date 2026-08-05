@@ -8,6 +8,8 @@
 
 class UInputMappingContext;
 class UInputAction;
+class UT_InventoryComponent;
+class UT_InventoryWidget;
 struct FInputActionValue;
 struct FGameplayTag;
 
@@ -20,6 +22,16 @@ public:
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Crash|Input|Movement", meta = (AllowPrivateAccess = "true"))
 	FVector2D MovementVector;
+
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void ToggleInventory();
+
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void OpenInventory(UT_InventoryComponent* StorageInventory = nullptr);
+
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void CloseInventory();
+	
 protected:
 	virtual void SetupInputComponent() override;
 
@@ -67,6 +79,12 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	TObjectPtr<UInputAction> PickUpAction;
 
+	UPROPERTY(EditDefaultsOnly, Category="Crash|Input|Inventory")
+	TObjectPtr<UInputAction> InventoryAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|Inventory")
+	TSubclassOf<UT_InventoryWidget> InventoryWidgetClass;
+
 	void Jump();
 	void StopJumping();
 	void Move(const FInputActionValue& Value);
@@ -80,6 +98,7 @@ private:
 	void StartAim();
 	void StopAim();
 	void PickUp();
+	void ActivateQuickSlot(FKey Key);
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
 	void ReleaseAbility(const FGameplayTag& AbilityTag) const;
 	bool IsAlive() const;
@@ -89,5 +108,10 @@ private:
 	void StopCatch();
 	void ReleaseGrab();
 	void SendPlayerGameplayEvent(const FGameplayTag& EventTag, float EventMagnitude = 0.0f) const;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UT_InventoryWidget> InventoryWidget;
+
+	bool bWasMouseCursorVisible = false;
 
 };
