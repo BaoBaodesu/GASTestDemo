@@ -271,7 +271,12 @@ bool UT_InventoryComponent::ActivateQuickSlot(int32 QuickSlotIndex)
 
 	const int32 SlotIndex = FindItemById(ItemDefinition->ItemId);
 	if (SlotIndex == INDEX_NONE) return false;
-	return IsValid(ItemDefinition->EquippedActorClass) ? EquipItem(SlotIndex) : UseItem(SlotIndex);
+	if (IsValid(ItemDefinition->EquippedActorClass))
+	{
+		if (Slots.IsValidIndex(EquippedSlotIndex) && Slots[EquippedSlotIndex].ItemDefinition == ItemDefinition) return UnequipItem();
+		return EquipItem(SlotIndex);
+	}
+	return UseItem(SlotIndex);
 }
 
 UT_ItemDefinition* UT_InventoryComponent::GetQuickSlotItem(int32 QuickSlotIndex) const

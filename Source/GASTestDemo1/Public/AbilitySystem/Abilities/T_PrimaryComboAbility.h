@@ -33,6 +33,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
 	TArray<TObjectPtr<UAnimMontage>> AttackMontages;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage")
+	TSubclassOf<class UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage")
+	float HitBoxRadius = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage")
+	float HitBoxForwardOffset = 200.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage")
+	float HitBoxElevationOffset = 20.0f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Combo")
 	int32 ComboIndex = 0;
 
@@ -42,6 +54,9 @@ protected:
 	bool bComboMontageSwitching = false;
 
 	void PlayComboMontage();
+
+	UFUNCTION()
+	void OnPrimaryAttackEvent(FGameplayEventData Payload);
 
 	UFUNCTION()
 	void TryPlayNextCombo();

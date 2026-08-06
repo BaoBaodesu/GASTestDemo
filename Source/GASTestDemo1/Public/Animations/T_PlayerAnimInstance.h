@@ -81,6 +81,9 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category="Animation|Aim", meta=(AllowPrivateAccess="true"))
 	float Yaw{0.f};
 
+	UPROPERTY(BlueprintReadOnly, Category="Animation|IK", meta=(AllowPrivateAccess="true"))
+	bool bShouldDoIKTrace{false};
+
 	UPROPERTY(EditDefaultsOnly, Category="Animation|Movement", meta=(ClampMin="0.0"))
 	float MovementThreshold{0.1f};
 

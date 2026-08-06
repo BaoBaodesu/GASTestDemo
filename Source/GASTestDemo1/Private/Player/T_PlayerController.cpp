@@ -61,8 +61,12 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Started, this, &ThisClass::StartCatch);
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Completed, this, &ThisClass::StopCatch);
 	EnhancedInputComponent->BindAction(CatchAction, ETriggerEvent::Canceled, this, &ThisClass::StopCatch);
+	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &ThisClass::ToggleCrouch);
+	
+	
 	EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ThisClass::ReleaseGrab);
 	EnhancedInputComponent->BindAction(PickUpAction, ETriggerEvent::Started, this, &ThisClass::PickUp);
+	
 	if (IsValid(InventoryAction)) EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &ThisClass::ToggleInventory);
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
@@ -88,6 +92,7 @@ void AT_PlayerController::OpenInventory(UT_InventoryComponent* StorageInventory)
 		InventoryWidget->AddToViewport();
 	}
 
+	StopAim();
 	InventoryWidget->InitializeInventory(PlayerCharacter->GetInventoryComponent(), StorageInventory);
 	bWasMouseCursorVisible = bShowMouseCursor;
 	bShowMouseCursor = true;
@@ -211,6 +216,15 @@ void AT_PlayerController::StandingDodge()
 void AT_PlayerController::Roll()
 {
 	ActivateAbility(TTags::TAbilities::Roll);
+}
+
+void AT_PlayerController::ToggleCrouch()
+{
+	ACharacter* ControlledCharacter = GetCharacter();
+	if (!IsValid(ControlledCharacter)) return;
+
+	if (ControlledCharacter->bIsCrouched) ControlledCharacter->UnCrouch();
+	else ControlledCharacter->Crouch();
 }
 
 void AT_PlayerController::StartAim()

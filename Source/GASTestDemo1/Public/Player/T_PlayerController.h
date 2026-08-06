@@ -74,6 +74,9 @@ private:
 	UInputAction* CatchAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	UInputAction* CrouchAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* ReleaseAction;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
@@ -95,6 +98,7 @@ private:
 	void Tertiary();
 	void StandingDodge();
 	void Roll();
+	void ToggleCrouch();
 	void StartAim();
 	void StopAim();
 	void PickUp();

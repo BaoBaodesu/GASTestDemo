@@ -1,10 +1,38 @@
 #include "Animations/T_PlayerAnimInstance.h"
 
+#include "Abilities/GameplayAbility.h"
+#include "AbilitySystemComponent.h"
+#include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameplayTags/TTags.h"
 #include "KismetAnimationLibrary.h"
 #include "Player/Components/T_AimingComponent.h"
+
+namespace
+{
+	bool IsAnyIKBlockingAbilityActive(const UAbilitySystemComponent* AbilitySystemComponent)
+	{
+		if (!IsValid(AbilitySystemComponent)) return false;
+
+		FGameplayTagContainer BlockingAbilityTags;
+		BlockingAbilityTags.AddTag(TTags::TAbilities::Primary);
+		BlockingAbilityTags.AddTag(TTags::TAbilities::Secondary);
+		BlockingAbilityTags.AddTag(TTags::TAbilities::Tertiary);
+
+		for (const FGameplayAbilitySpec& AbilitySpec : AbilitySystemComponent->GetActivatableAbilities())
+		{
+			if (!AbilitySpec.IsActive() || !IsValid(AbilitySpec.Ability)) continue;
+
+			FGameplayTagContainer AbilityTags = AbilitySpec.Ability->GetAssetTags();
+			AbilityTags.AppendTags(AbilitySpec.GetDynamicSpecSourceTags());
+			if (AbilityTags.HasAnyExact(BlockingAbilityTags)) return true;
+		}
+
+		return false;
+	}
+}
 
 void UT_PlayerAnimInstance::NativeInitializeAnimation()
 {
@@ -64,6 +92,19 @@ void UT_PlayerAnimInstance::UpdateProjectSpecificData()
 {
 	const AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(Character);
 	bHasPistolGun = IsValid(PlayerCharacter) && PlayerCharacter->HasPistolGun();
+
+	const AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(Character);
+	const UAbilitySystemComponent* AbilitySystemComponent = IsValid(BaseCharacter) ? BaseCharacter->GetAbilitySystemComponent() : nullptr;
+	const bool bIKBlockingAction = IsValid(AbilitySystemComponent) && (
+		AbilitySystemComponent->HasMatchingGameplayTag(TTags::State::Action::Grabbing) ||
+		AbilitySystemComponent->HasMatchingGameplayTag(TTags::State::Action::Rolling) ||
+		AbilitySystemComponent->HasMatchingGameplayTag(TTags::State::Action::Traversing));
+	const UAnimMontage* ActiveMontage = GetCurrentActiveMontage();
+
+	bShouldDoIKTrace = IsValid(BaseCharacter) && BaseCharacter->IsAlive() &&
+		!bIsFalling && !bGrabbed && !bIKBlockingAction &&
+		!IsAnyIKBlockingAbilityActive(AbilitySystemComponent) &&
+		(!IsValid(ActiveMontage) || !ActiveMontage->HasRootMotion());
 }
 
 void UT_PlayerAnimInstance::ResetAnimationData()
@@ -83,6 +124,7 @@ void UT_PlayerAnimInstance::ResetAnimationData()
 	bGrabbed = false;
 	bHasPistolGun = false;
 	bAiming = false;
+	bShouldDoIKTrace = false;
 	bOrientRotationToMovement = true;
 	GrabType = ET_GrabType::None;
 }
