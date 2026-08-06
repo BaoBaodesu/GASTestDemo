@@ -101,6 +101,7 @@ void UT_PrimaryComboAbility::PlayComboMontage()
 	}
 
 	PlayMontageTask->OnCompleted.AddDynamic(this, &UT_PrimaryComboAbility::TryPlayNextCombo);
+	PlayMontageTask->OnBlendOut.AddDynamic(this, &UT_PrimaryComboAbility::OnComboMontageInterrupted);
 	PlayMontageTask->OnInterrupted.AddDynamic(this, &UT_PrimaryComboAbility::OnComboMontageInterrupted);
 	PlayMontageTask->OnCancelled.AddDynamic(this, &UT_PrimaryComboAbility::OnComboMontageInterrupted);
 

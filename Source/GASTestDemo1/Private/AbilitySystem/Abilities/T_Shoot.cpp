@@ -51,6 +51,7 @@ void UT_Shoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, FireMontage, 1.f, NAME_None, false);
 	if (!IsValid(MontageTask)) { EndAbility(Handle, ActorInfo, ActivationInfo, true, true); return; }
 	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageCompleted);
+	MontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnMontageCancelled);
 	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageCancelled);
 	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageCancelled);
 	MontageTask->ReadyForActivation();
