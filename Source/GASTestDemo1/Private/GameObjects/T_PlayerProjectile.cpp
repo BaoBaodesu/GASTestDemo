@@ -90,7 +90,7 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 		FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, ContextHandle);
 		if (SpecHandle.IsValid())
 		{
-			SpecHandle.Data->SetSetByCallerMagnitude(TTags::SetByCaller::Projectile, Damage);
+			SpecHandle.Data->SetSetByCallerMagnitude(TTags::SetByCaller::Projectile, -Damage);
 			SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 		}
 	}

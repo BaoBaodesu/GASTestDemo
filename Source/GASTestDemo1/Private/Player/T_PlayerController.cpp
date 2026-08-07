@@ -5,6 +5,7 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Blueprint/UserWidget.h"
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -72,6 +73,21 @@ void AT_PlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
 	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
 	InputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
+}
+
+void AT_PlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+	if (!IsLocalController()) return;
+
+	if (!IsValid(PlayerHUDWidgetClass))
+	{
+		PlayerHUDWidgetClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/GASTestDemo/UI/WBP_PlayerHUD.WBP_PlayerHUD_C"));
+	}
+	if (!IsValid(PlayerHUDWidgetClass)) return;
+
+	PlayerHUDWidget = CreateWidget<UUserWidget>(this, PlayerHUDWidgetClass);
+	if (IsValid(PlayerHUDWidget)) PlayerHUDWidget->AddToViewport();
 }
 
 void AT_PlayerController::ToggleInventory()
