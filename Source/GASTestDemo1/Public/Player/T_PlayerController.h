@@ -8,6 +8,7 @@
 
 class UInputMappingContext;
 class UInputAction;
+class UUserWidget;
 class UT_InventoryComponent;
 class UT_InventoryWidget;
 struct FInputActionValue;
@@ -33,6 +34,8 @@ public:
 	void CloseInventory();
 	
 protected:
+	virtual void BeginPlay() override;
+
 	virtual void SetupInputComponent() override;
 
 private:
@@ -88,6 +91,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|Inventory")
 	TSubclassOf<UT_InventoryWidget> InventoryWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|HUD")
+	TSubclassOf<UUserWidget> PlayerHUDWidgetClass;
+
 	void Jump();
 	void StopJumping();
 	void Move(const FInputActionValue& Value);
@@ -115,6 +121,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UT_InventoryWidget> InventoryWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UUserWidget> PlayerHUDWidget;
 
 	bool bWasMouseCursorVisible = false;
 
