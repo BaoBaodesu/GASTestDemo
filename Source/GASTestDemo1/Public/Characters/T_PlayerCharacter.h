@@ -8,6 +8,7 @@
 #include "T_PlayerCharacter.generated.h"
 
 class UCameraComponent;
+class UAnimMontage;
 class USpringArmComponent;
 class UT_TraversalComponent;
 class UT_GrabComponent;
@@ -91,6 +92,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USkeletalMeshComponent> EquippedWeaponMesh;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Animation")
+	TObjectPtr<UAnimMontage> EquipPistolMontage;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UT_PickUpComponent> PickUpComponent;

@@ -97,6 +97,12 @@ void UT_AimingComponent::StopAiming()
 	RestoreMovementSettings();
 }
 
+void UT_AimingComponent::SetUnaimedMaxWalkSpeed(float MaxWalkSpeed)
+{
+	if (bHasCachedMovementSettings) CachedMaxWalkSpeed = MaxWalkSpeed;
+	else if (IsValid(MovementComponent)) MovementComponent->MaxWalkSpeed = MaxWalkSpeed;
+}
+
 void UT_AimingComponent::UpdateAnimationState()
 {
 	if (!IsValid(Character)) return;

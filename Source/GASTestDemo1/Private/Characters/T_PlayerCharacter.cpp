@@ -4,6 +4,7 @@
 #include "GASTestDemo1/Public/Characters/T_PlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Animation/AnimMontage.h"
 #include "MotionWarpingComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "AbilitySystem/Abilities/T_Reload.h"
@@ -27,6 +28,7 @@
 #include "Inventory/T_InventoryComponent.h"
 #include "Inventory/T_ItemDefinition.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/ConstructorHelpers.h"
 
 
 // Sets default values
@@ -76,6 +78,10 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	PickUpComponent = CreateDefaultSubobject<UT_PickUpComponent>(TEXT("PickUpComponent"));
 	InventoryComponent = CreateDefaultSubobject<UT_InventoryComponent>(TEXT("InventoryComponent"));
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> EquipPistolMontageAsset(
+		TEXT("/Game/GASTestDemo/Characters/PlayerCharacters/Animations/Test/Shoot/AM_Equip_Pistol_Standing.AM_Equip_Pistol_Standing"));
+	EquipPistolMontage = EquipPistolMontageAsset.Object;
 }
 
 
@@ -275,6 +281,7 @@ bool AT_PlayerCharacter::EquipInventoryItem_Implementation(UT_ItemDefinition* It
 {
 	if (!CanEquipInventoryItem_Implementation(ItemDefinition) || !IsValid(GetWorld())) return false;
 	bHasPistolGun = false;
+	AimingComponent->SetUnaimedMaxWalkSpeed(650.f);
 
 	if (IsValid(EquippedInventoryActor))
 	{
@@ -318,6 +325,8 @@ bool AT_PlayerCharacter::EquipInventoryItem_Implementation(UT_ItemDefinition* It
 
 	EquippedWeaponMesh = EquippedInventoryActor->FindComponentByClass<USkeletalMeshComponent>();
 	bHasPistolGun = true;
+	AimingComponent->SetUnaimedMaxWalkSpeed(550.f);
+	if (IsValid(EquipPistolMontage)) PlayAnimMontage(EquipPistolMontage);
 	return true;
 }
 
@@ -328,6 +337,7 @@ bool AT_PlayerCharacter::UnequipInventoryItem_Implementation(UT_ItemDefinition* 
 	EquippedInventoryActor = nullptr;
 	EquippedWeaponMesh = nullptr;
 	bHasPistolGun = false;
+	AimingComponent->SetUnaimedMaxWalkSpeed(650.f);
 	return true;
 }
 

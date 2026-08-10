@@ -28,6 +28,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Aiming")
 	void StopAiming();
 
+	void SetUnaimedMaxWalkSpeed(float MaxWalkSpeed);
+
 	UFUNCTION(BlueprintPure, Category="Aiming")
 	bool IsAiming() const { return bAiming; }
 
