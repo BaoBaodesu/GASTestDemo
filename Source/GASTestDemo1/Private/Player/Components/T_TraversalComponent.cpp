@@ -5,12 +5,39 @@
 #include "Components/CapsuleComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Characters/T_BaseCharacter.h"
+#include "EngineUtils.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameObjects/T_PickUpItems.h"
 #include "GameplayTags/TTags.h"
 #include "Player/Traversal/T_TraversalClimb.h"
 #include "Player/Traversal/T_TraversalMantle.h"
 #include "Player/Traversal/T_TraversalVault.h"
+
+namespace
+{
+	void ConfigureTraversalQueryParams(
+		FCollisionQueryParams& QueryParams,
+		const ACharacter* OwnerCharacter,
+		UWorld* World)
+	{
+		QueryParams.AddIgnoredActor(OwnerCharacter);
+
+		if (!IsValid(World))
+		{
+			return;
+		}
+
+		// 平台上的 BP_PickUpItem（AT_PickUpItems）会阻挡 Visibility 检测通道，攀爬时需忽略
+		for (TActorIterator<AT_PickUpItems> ItemIterator(World); ItemIterator; ++ItemIterator)
+		{
+			if (AT_PickUpItems* Item = *ItemIterator; IsValid(Item))
+			{
+				QueryParams.AddIgnoredActor(Item);
+			}
+		}
+	}
+}
 
 
 UT_TraversalComponent::UT_TraversalComponent()
@@ -105,7 +132,7 @@ bool UT_TraversalComponent::DetectWall(
 	const FVector TraceEnd = TraceStart + CharacterForward * WallTraceDistance;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	const bool bHitWall = GetWorld()->SweepSingleByChannel(OutWallHit, TraceStart, TraceEnd, FQuat::Identity, TraversalTraceChannel, FCollisionShape::MakeSphere(WallTraceRadius), QueryParams, FCollisionResponseParams::DefaultResponseParam);
 
@@ -175,7 +202,7 @@ bool UT_TraversalComponent::DetectTop(
 	TraceEnd.Z = GetCharacterFeetLocation().Z - 20.f;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	const bool bHitTop = GetWorld()->SweepSingleByChannel(OutTopHit, TraceStart, TraceEnd, FQuat::Identity, TraversalTraceChannel, FCollisionShape::MakeSphere(WallTraceRadius), QueryParams);
 
@@ -245,7 +272,7 @@ bool UT_TraversalComponent::DetectVaultTop(
 	TraceEnd.Z = FeetLocation.Z - 20.f;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 	QueryParams.bTraceComplex = false;
 
 	const bool bHitTop = GetWorld()->SweepSingleByChannel(OutTopHit, TraceStart, TraceEnd, FQuat::Identity, TraversalTraceChannel, FCollisionShape::MakeSphere(WallTraceRadius), QueryParams);
@@ -298,7 +325,7 @@ bool UT_TraversalComponent::MeasureObstacleDepth(
 	const FVector IntoObstacleDirection = GetIntoObstacleDirection(WallHit.ImpactNormal);
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	for (float CurrentDistance = TopTraceInset + DepthTraceStep;
 		CurrentDistance <= MaximumDepthToMeasure;
@@ -390,7 +417,7 @@ bool UT_TraversalComponent::FindTopStandingLocation(
 	const FVector TraceEnd = FloorReferenceLocation - FVector::UpVector * LandingTraceDepth;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	FHitResult FloorHit;
 
@@ -438,7 +465,7 @@ bool UT_TraversalComponent::FindLandingLocation(
 	const FVector TraceEnd = LandingReferenceLocation - FVector::UpVector * LandingTraceDepth;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	FHitResult LandingHit;
 
@@ -487,7 +514,7 @@ bool UT_TraversalComponent::IsCapsuleLocationClear(
 	const float CapsuleHalfHeight = FMath::Max(CapsuleRadius, OwnerCapsuleComponent->GetScaledCapsuleHalfHeight() - EffectiveClearanceShrink);
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	const bool bBlocked = GetWorld()->OverlapBlockingTestByChannel(CapsuleLocation, FQuat::Identity, CapsuleTestChannel, FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight), QueryParams, FCollisionResponseParams::DefaultResponseParam);
 
@@ -528,7 +555,7 @@ bool UT_TraversalComponent::FindSafeStandingLocationBelow(
 		ReferenceLocation - FVector::UpVector * LandingTraceDepth;
 
 	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(OwnerCharacter);
+	ConfigureTraversalQueryParams(QueryParams, OwnerCharacter, GetWorld());
 
 	FHitResult FloorHit;
 	const bool bHitFloor = GetWorld()->LineTraceSingleByChannel(

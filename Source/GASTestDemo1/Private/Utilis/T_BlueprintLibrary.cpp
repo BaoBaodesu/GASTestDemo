@@ -1,9 +1,10 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Utils/T_BlueprintLibrary.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "InterchangeTranslatorBase.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Characters/T_BaseCharacter.h"
@@ -118,7 +119,7 @@ FName UT_BlueprintLibrary::GetRollDirectionName(const ERollDirection& RollDirect
 }
 
 /**
-  * 在场景中找出“带指定Tag的Actor里，距离某个点最近的那个Actor”
+  * ?????????????????Tag??Actor???????????????????Actor??
   */
 FClosestActorWithTagResult UT_BlueprintLibrary::FindClosestActorWithTag(UObject* WorldContextObject,
 	const FVector& Origin, const FName& Tag, float SearchRange)
@@ -130,14 +131,14 @@ FClosestActorWithTagResult UT_BlueprintLibrary::FindClosestActorWithTag(UObject*
 	float ClosestDistance = TNumericLimits<float>::Max();
 	AActor* ClosestActor = nullptr;
 	
-	// 遍历所有符合 Tag 的 Actor
+	// ??????????? Tag ?? Actor
 	for (AActor* Actor : ActorsWithTag)
 	{
 		if (!IsValid(Actor)) continue;
 		AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(Actor);
 		if (!IsValid(BaseCharacter) || !BaseCharacter->IsAlive()) continue;
 		
-		// 计算 Origin 到 Actor 的距离
+		// ???? Origin ?? Actor ?????
 		const float Distance = FVector::Dist(Origin, Actor->GetActorLocation());
 		
 		AT_EnemyCharacter* SearchingCharacter = Cast<AT_EnemyCharacter>(WorldContextObject);
@@ -145,7 +146,7 @@ FClosestActorWithTagResult UT_BlueprintLibrary::FindClosestActorWithTag(UObject*
 		{
 			if (Distance > SearchingCharacter->SearchRange) continue;
 		}
-		// 找到更近的目标则更新
+		// ?????????????????
 		if (Distance < ClosestDistance)
 		{
 			ClosestDistance = Distance;
@@ -160,12 +161,23 @@ FClosestActorWithTagResult UT_BlueprintLibrary::FindClosestActorWithTag(UObject*
 	return Result;
 }
 
+bool UT_BlueprintLibrary::IsInvincible(AActor* Actor)
+{
+	if (!IsValid(Actor)) return false;
+
+	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Actor);
+	if (!IsValid(ASC)) return false;
+
+	return ASC->HasMatchingGameplayTag(TTags::State::Action::Invincible);
+}
+
 void UT_BlueprintLibrary::SendDamageEventToPlayer(AActor* Target, const TSubclassOf<UGameplayEffect>& DamageEffect,
 	FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, const FGameplayTag &EventTagOverride, UObject* OptionalParticleSystem)
 {
 	AT_BaseCharacter* PlayerCharacter = Cast<AT_BaseCharacter>(Target);
-	if (!IsValid(PlayerCharacter)) return;
-	if (!PlayerCharacter->IsAlive()) return;
+	if (!IsValid(PlayerCharacter) || !PlayerCharacter->IsAlive()) return;
+	if (IsInvincible(PlayerCharacter)) return;
+
 	FGameplayTag EventTag;
 	if (!EventTagOverride.MatchesTagExact(TTags::None))
 	{
@@ -175,26 +187,22 @@ void UT_BlueprintLibrary::SendDamageEventToPlayer(AActor* Target, const TSubclas
 	{
 		UT_AttributeSet* AttributeSet = Cast<UT_AttributeSet>(PlayerCharacter->GetAttributeSet());
 		if (!IsValid(AttributeSet)) return;
-	
+
 		const bool bLethal = AttributeSet->GetHealth() - Damage <= 0.0f;
 		EventTag = bLethal ? TTags::Events::Player::Death : TTags::Events::Player::HitReact;
 	}
 
-	
 	Payload.OptionalObject = OptionalParticleSystem;
-	
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(PlayerCharacter, EventTag, Payload);
-	
+
 	UAbilitySystemComponent* TargetASC = PlayerCharacter->GetAbilitySystemComponent();
 	if (!IsValid(TargetASC)) return;
-	
+
+	TargetASC->HandleGameplayEvent(EventTag, &Payload);
+
 	FGameplayEffectContextHandle ContextHandle = TargetASC->MakeEffectContext();
 	FGameplayEffectSpecHandle SpecHandle = TargetASC->MakeOutgoingSpec(DamageEffect, 1.0f, ContextHandle);
-	
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, DataTag, -Damage);
-	
 	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-	
 }
 
 
@@ -212,42 +220,42 @@ TArray<AActor*> UT_BlueprintLibrary::HitBoxOverlapTest(AActor* AvatarActor, floa
                                                        float HitBoxForwardOffset, float HitBoxElevationOffset, bool bDrawDebugs)
 {
 	if (!IsValid(AvatarActor)) return TArray<AActor*>();
-	// 忽略自己
+	// ???????
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(AvatarActor);
 
-	// 确保重叠检测忽略 Avatar Actor。
+	// ???????????? Avatar Actor??
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActors(ActorsToIgnore);
 	QueryParams.AddIgnoredActor(AvatarActor);
 
-	// 只检测 Pawn
+	// ???? Pawn
 	FCollisionResponseParams ResponseParams;
 	ResponseParams.CollisionResponse.SetAllChannels(ECR_Ignore);
 	ResponseParams.CollisionResponse.SetResponse(ECC_Pawn, ECR_Block);
 
-	// 保存重叠结果
+	// ??????????
 	TArray<FOverlapResult> OverlapResults;
-	// 创建球形检测体
+	// ????????????
 	FCollisionShape Sphere = FCollisionShape::MakeSphere(HitBoxRadius);
 
-	// 计算检测位置
+	// ?????????
 	const FVector Forward = AvatarActor->GetActorForwardVector() * HitBoxForwardOffset;
 	const FVector HitBoxLocation = AvatarActor->GetActorLocation() + Forward + FVector(0.f, 0.f, HitBoxElevationOffset);
 	
 	UWorld* World = GEngine->GetWorldFromContextObject(AvatarActor, EGetWorldErrorMode::LogAndReturnNull);
 	if (!IsValid(World)) return TArray<AActor*>();
-	// 执行球形重叠检测
+	// ?????????????
 	World->OverlapMultiByChannel(OverlapResults, HitBoxLocation, FQuat::Identity, ECC_Visibility, Sphere, QueryParams, ResponseParams);
 
-	// 保存命中的角色
+	// ???????????
 	TArray<AActor*> ActorsHit;
 	for (const FOverlapResult& Result : OverlapResults)
 	{
 		AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(Result.GetActor());
 		if (!IsValid(BaseCharacter)) continue;
 		if (!BaseCharacter->IsAlive()) continue;
-		// 避免重复添加
+		// ???????????
 		ActorsHit.AddUnique(BaseCharacter);		
 	}
 
@@ -265,10 +273,10 @@ void UT_BlueprintLibrary::DrawHitBoxOverlapDebugs(const UObject* WorldContextObj
 	UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (!IsValid(World)) return;
 	
-	// 绘制检测球体
+	// ??????????
 	DrawDebugSphere(World, HitBoxLocation, HitBoxRadius, 16, FColor::Red, false, 3.0f);
 	
-	// 绘制命中目标位置
+	// ??????????????
 	for (const FOverlapResult& Result : OverlapResults)
 	{
 		if (IsValid(Result.GetActor()))
@@ -280,58 +288,58 @@ void UT_BlueprintLibrary::DrawHitBoxOverlapDebugs(const UObject* WorldContextObj
 	}
 }
 
-// 对命中的角色数组 HitActors 进行击退处理
+// ????????????? HitActors ??????????
 TArray<AActor*> UT_BlueprintLibrary::ApplyKnockback(AActor* AvatarActor, const TArray<AActor*>& HitActors,
 	float InnerRadius, float OuterRadius, float LaunchForceMagnitude, float RotationAngle, bool bDrawDebugs)
 {
 	for (AActor* HitActor : HitActors)
 	{
-		// 只处理 Character 类型的目标
+		// ????? Character ????????
 		ACharacter* HitCharacter = Cast<ACharacter>(HitActor);
 		if (!IsValid(HitCharacter) || !IsValid(AvatarActor)) return TArray<AActor*>();
 		
-		// 获取被击中角色的位置
+		// ????????????????
 		const FVector HitCharacterLocation = HitCharacter->GetActorLocation();
 		const FVector AvatarLocation = AvatarActor->GetActorLocation();
 		
-		// 计算从攻击者指向目标的方向
+		// ????????????????????
 		const FVector ToHitActor = HitCharacterLocation - AvatarLocation;
 		
-		// 计算攻击者和目标之间的距离
+		// ???????????????????
 		const float Distance = FVector::Dist(AvatarLocation, HitCharacterLocation);
 		
-		// 击退力度
+		// ????????
 		float LaunchForce = 0.0f;
-		// 超出外半径，不击退
+		// ???????????????
 		if (Distance > OuterRadius) continue;
 		
-		// 内半径内，使用最大击退力
+		// ?????????????????
 		if (Distance <= InnerRadius)
 		{
 			LaunchForce = LaunchForceMagnitude;
 		}
 		else
 		{
-			// 内半径到外半径之间，击退力逐渐衰减
+			// ??????????????????????
 			const FVector2D FalloffRange(InnerRadius, OuterRadius);
 			const FVector2D LaunchForceRange(LaunchForceMagnitude, 0.0f);
 			LaunchForce = FMath::GetMappedRangeValueClamped(FalloffRange, LaunchForceRange, Distance);
 		}
-		// 打印击退力度
+		// ???????????
 		if (bDrawDebugs)GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("LaunchForce: %f"), LaunchForce));
 		
-		// 计算击退方向
+		// ??????????
 		FVector KnockbackForce = ToHitActor.GetSafeNormal();
-		// 先清掉 Z，保证基础方向是水平击退
+		// ????? Z?????????????????????
 		KnockbackForce.Z = 0.0f;
 		
-		// 计算右方向，用来调整击退角度
+		// ???????????????????????
 		const FVector Right = KnockbackForce.RotateAngleAxis(90.0f, FVector::UpVector);
 		
-		// 根据 RotationAngle 调整击退方向，并乘以击退力度
+		// ???? RotationAngle ????????????????????????
 		KnockbackForce = KnockbackForce.RotateAngleAxis(-RotationAngle, Right) * LaunchForce;
 		
-		// 绘制击退方向箭头
+		// ????????????
 		if (bDrawDebugs)
 		{
 			UWorld* World = GEngine->GetWorldFromContextObject(AvatarActor, EGetWorldErrorMode::LogAndReturnNull);
@@ -344,7 +352,7 @@ TArray<AActor*> UT_BlueprintLibrary::ApplyKnockback(AActor* AvatarActor, const T
 			EnemyCharacter->StopMovementUntilLanded();
 		}
 		
-		// 对角色施加击退
+		// ??????????
 		HitCharacter->LaunchCharacter(KnockbackForce, true, true);
 	}	
 	return HitActors;

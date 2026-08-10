@@ -21,7 +21,7 @@ public:
 
 	AT_PlayerProjectile* FireProjectile(const FVector& AimPoint,
 		TSubclassOf<AT_PlayerProjectile> ProjectileClass,
-		TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor);
+		TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor, bool bHeadshot = false);
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category="Projectile Shooter|FX")

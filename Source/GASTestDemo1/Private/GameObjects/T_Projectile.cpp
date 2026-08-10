@@ -29,6 +29,7 @@ void AT_Projectile::NotifyActorBeginOverlap(AActor* OtherActor)
 	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(OtherActor);
 	if (!IsValid(PlayerCharacter)) return;
 	if (!PlayerCharacter->IsAlive()) return;
+	if (UT_BlueprintLibrary::IsInvincible(PlayerCharacter)) return;
 	UAbilitySystemComponent* AbilitySystemComponent = PlayerCharacter->GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent) || !HasAuthority()) return;

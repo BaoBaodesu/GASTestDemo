@@ -6,14 +6,18 @@
 #include "AbilitySystemComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
+#include "AbilitySystem/Abilities/T_Reload.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameObjects/T_PlayerProjectile.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameplayTags/TTags.h"
 #include "Player/Components/T_LockOnComponent.h"
 #include "Player/T_PlayerState.h"
 #include "Player/Components/T_AimingComponent.h"
@@ -22,6 +26,7 @@
 #include "Player/Components/T_TraversalComponent.h"
 #include "Inventory/T_InventoryComponent.h"
 #include "Inventory/T_ItemDefinition.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -74,6 +79,11 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 }
 
 
+void AT_PlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ThisClass, bHasPistolGun);
+}
 
 UAbilitySystemComponent* AT_PlayerCharacter::GetAbilitySystemComponent() const
 {
@@ -126,6 +136,23 @@ void AT_PlayerCharacter::PossessedBy(AController* NewController)
 	GetAbilitySystemComponent()->InitAbilityActorInfo(GetPlayerState(), this);
 	
 	GiveStartupAbilities();
+	// 换弹能力兜底授予：若蓝图未配置 GA_T_Reload，直接授予原生 UT_Reload，保证 R 键可用
+	if (UAbilitySystemComponent* T_ASC = GetAbilitySystemComponent())
+	{
+		bool bReloadGranted = false;
+		for (const FGameplayAbilitySpec& AbilitySpec : T_ASC->GetActivatableAbilities())
+		{
+			if (AbilitySpec.Ability && AbilitySpec.Ability->GetAssetTags().HasTagExact(TTags::TAbilities::Reload))
+			{
+				bReloadGranted = true;
+				break;
+			}
+		}
+		if (!bReloadGranted)
+		{
+			T_ASC->GiveAbility(FGameplayAbilitySpec(UT_Reload::StaticClass()));
+		}
+	}
 	InitializeAttributes();
 	
 	OnASCInitialized.Broadcast(GetAbilitySystemComponent(), GetAttributeSet());
@@ -188,15 +215,50 @@ void AT_PlayerCharacter::SetTraversalCollisionEnabled(bool bEnabled)
 	bTraversalCollisionDisabled = false;
 }
 
+void AT_PlayerCharacter::SetInvincibilityCollisionEnabled(bool bInvincible)
+{
+	if (bInvincibilityCollisionActive == bInvincible) return;
+	bInvincibilityCollisionActive = bInvincible;
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	// 只让飞行中的投射物忽略自身。修改胶囊对 WorldDynamic 的响应会连地面平台和可动墙体一起忽略，
+	// 导致无敌窗口内踩空坠落或卡进墙里。
+	for (TActorIterator<AT_PlayerProjectile> ProjectileIt(World); ProjectileIt; ++ProjectileIt)
+	{
+		ProjectileIt->SetMoveIgnoredActor(this, bInvincible);
+	}
+}
+
 bool AT_PlayerCharacter::CanUseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition)
 {
-	return IsValid(ItemDefinition) && ItemDefinition->bCanUse;
+	return IsValid(ItemDefinition)
+		&& ItemDefinition->bCanUse
+		&& ItemDefinition->ItemType != ETItemType::Weapon;
 }
 
 bool AT_PlayerCharacter::UseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition)
 {
-	// 具体药水或投掷物效果由角色蓝图覆写接口事件。
-	return false;
+	if (!IsValid(ItemDefinition) || !ItemDefinition->UseEffect)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseInventoryItem: 物品 [%s] 未配置 UseEffect。"), *GetNameSafe(ItemDefinition));
+		return false;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!IsValid(ASC))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseInventoryItem: ASC 无效，无法应用 UseEffect。"));
+		return false;
+	}
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(ItemDefinition->UseEffect, 1.0f, Context);
+	if (!Spec.IsValid()) return false;
+
+	ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+	return true;
 }
 
 bool AT_PlayerCharacter::CanEquipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition)
@@ -267,4 +329,16 @@ bool AT_PlayerCharacter::UnequipInventoryItem_Implementation(UT_ItemDefinition* 
 	EquippedWeaponMesh = nullptr;
 	bHasPistolGun = false;
 	return true;
+}
+
+void AT_PlayerCharacter::ClientNotifyHitConfirmed_Implementation()
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+	if (!IsValid(AbilitySystemComponent)) return;
+
+	FGameplayEventData Payload;
+	Payload.EventTag = TTags::Events::Player::Shoot::Hit;
+	Payload.Instigator = this;
+	Payload.Target = this;
+	AbilitySystemComponent->HandleGameplayEvent(TTags::Events::Player::Shoot::Hit, &Payload);
 }

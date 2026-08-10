@@ -20,7 +20,7 @@
 UT_AimingComponent::UT_AimingComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	static ConstructorHelpers::FClassFinder<UUserWidget> CrosshairWidgetClassFinder(TEXT("/Game/GASTestDemo/UI/WBP_Anchor"));
+	static ConstructorHelpers::FClassFinder<UUserWidget> CrosshairWidgetClassFinder(TEXT("/Game/GASTestDemo/UI/WeaponState/WBP_ThirdPerson_Crosshair1"));
 	if (CrosshairWidgetClassFinder.Succeeded()) CrosshairWidgetClass = CrosshairWidgetClassFinder.Class;
 }
 

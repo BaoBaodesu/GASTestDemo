@@ -10,6 +10,7 @@
 #include "Characters/T_PlayerCharacter.h"
 #include "GameplayTags/TTags.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Utils/T_BlueprintLibrary.h"
 
 
 void UT_MeleeAttack::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime,
@@ -88,6 +89,7 @@ void UT_MeleeAttack::SendEventsToActors(const TArray<FHitResult>& Hits, USkeleta
 		AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(Hit.GetActor());
 		if (!IsValid(PlayerCharacter)) continue;
 		if (!PlayerCharacter->IsAlive()) continue;
+		if (UT_BlueprintLibrary::IsInvincible(PlayerCharacter)) continue;
 		
 		// 获取玩家身上的 AbilitySystemComponent
 		UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent();

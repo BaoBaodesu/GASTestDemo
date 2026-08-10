@@ -366,6 +366,11 @@ FTInventoryStack UT_InventoryComponent::GetSlot(int32 SlotIndex) const
 	return Slots.IsValidIndex(SlotIndex) ? Slots[SlotIndex] : FTInventoryStack();
 }
 
+UT_ItemDefinition* UT_InventoryComponent::GetEquippedItem() const
+{
+	return Slots.IsValidIndex(EquippedSlotIndex) ? Slots[EquippedSlotIndex].ItemDefinition.Get() : nullptr;
+}
+
 int32 UT_InventoryComponent::FindEmptySlot() const
 {
 	for (int32 Index = 0; Index < Slots.Num(); ++Index) if (Slots[Index].IsEmpty()) return Index;
@@ -382,8 +387,9 @@ AT_PickUpItems* UT_InventoryComponent::SpawnDroppedItem(UT_ItemDefinition* ItemD
 	if (!IsValid(Item)) return nullptr;
 
 	Item->SetItemDefinition(ItemDefinition);
-	Item->SetQuantity(Quantity);
 	Item->FinishSpawning(SpawnTransform);
+	// BeginPlay 会按 DefaultQuantity 同步，丢弃数量需在生成后再覆盖
+	Item->SetQuantity(Quantity);
 	return Item;
 }
 

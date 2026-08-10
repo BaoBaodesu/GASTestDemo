@@ -65,6 +65,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Pick Up")
 	void SetQuantity(int32 InQuantity);
 
+	/** 将数量同步为 ItemDefinition 的 DefaultQuantity */
+	UFUNCTION(BlueprintCallable, Category="Pick Up")
+	void ApplyDefaultQuantityFromDefinition();
+
 	UFUNCTION(BlueprintCallable, Category="Pick Up")
 	bool ConsumeQuantity(AActor* Picker, int32 ConsumedQuantity);
 

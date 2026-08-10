@@ -10,6 +10,7 @@ class UAbilityTask_WaitGameplayEvent;
 class UAnimMontage;
 class UGameplayEffect;
 class USkeletalMeshComponent;
+class USoundBase;
 class UT_AimingComponent;
 class UT_ProjectileShooterComponent;
 
@@ -20,6 +21,9 @@ class GASTESTDEMO1_API UT_Shoot : public UT_GameplayAbility
 
 public:
 	UT_Shoot();
+
+	// 激活阻挡标签（供测试与蓝图检查）
+	const FGameplayTagContainer& GetActivationBlockedTags() const { return ActivationBlockedTags; }
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -47,8 +51,23 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Shoot|Damage")
 	float Damage{10.f};
 
+	// 命中敌人头部（head 骨骼附近）时的伤害倍率
+	UPROPERTY(EditDefaultsOnly, Category="Shoot|Damage")
+	float HeadshotDamageMultiplier{2.f};
+
+	// 用于判定头部命中的敌人骨骼名
+	UPROPERTY(EditDefaultsOnly, Category="Shoot|Damage")
+	FName HeadBoneName{TEXT("head")};
+
+	// 命中点距头部骨骼中心超过该距离则不视为头部命中（单位 cm）
+	UPROPERTY(EditDefaultsOnly, Category="Shoot|Damage")
+	float HeadshotToleranceRadius{40.f};
+
 	UPROPERTY(EditDefaultsOnly, Category="Shoot|Projectile")
 	TSubclassOf<AT_PlayerProjectile> ProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Shoot|Sound")
+	TObjectPtr<USoundBase> DryFireSound;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UT_AimingComponent> AimingComponent;

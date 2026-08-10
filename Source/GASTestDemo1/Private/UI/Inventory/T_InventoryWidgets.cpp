@@ -21,6 +21,12 @@
 
 void UT_InventoryDraggingWidget::SetItem(UT_InventoryComponent* InventoryComponent, int32 SlotIndex)
 {
+	if (!IsValid(ItemQuantity) && IsValid(WidgetTree))
+	{
+		ItemQuantity = Cast<UTextBlock>(WidgetTree->FindWidget(TEXT("Amount")));
+		if (!IsValid(ItemQuantity)) ItemQuantity = Cast<UTextBlock>(WidgetTree->FindWidget(TEXT("ItemAmount")));
+	}
+
 	const FTInventoryStack ItemStack = IsValid(InventoryComponent) ? InventoryComponent->GetSlot(SlotIndex) : FTInventoryStack();
 	if (IsValid(ItemImage)) ItemImage->SetBrushFromTexture(ItemStack.IsEmpty() ? nullptr : ItemStack.ItemDefinition->Thumbnail);
 	if (IsValid(ItemQuantity)) ItemQuantity->SetText(ItemStack.IsEmpty() ? FText::GetEmpty() : FText::AsNumber(ItemStack.Quantity));
@@ -49,7 +55,10 @@ void UT_InventoryActionMenuWidget::SetSelection(UT_InventoryComponent* Inventory
 	SelectedInventory = InventoryComponent;
 	SelectedSlotIndex = SlotIndex;
 	const FTInventoryStack ItemStack = IsValid(SelectedInventory) ? SelectedInventory->GetSlot(SelectedSlotIndex) : FTInventoryStack();
-	if (IsValid(UseButton)) UseButton->SetIsEnabled(!ItemStack.IsEmpty() && ItemStack.ItemDefinition->bCanUse);
+	const bool bCanUseSelectedItem = !ItemStack.IsEmpty()
+		&& ItemStack.ItemDefinition->bCanUse
+		&& ItemStack.ItemDefinition->ItemType != ETItemType::Weapon;
+	if (IsValid(UseButton)) UseButton->SetIsEnabled(bCanUseSelectedItem);
 	if (IsValid(EquipButton)) EquipButton->SetIsEnabled(!ItemStack.IsEmpty() && IsValid(ItemStack.ItemDefinition->EquippedActorClass));
 	if (IsValid(SplitButton)) SplitButton->SetIsEnabled(!ItemStack.IsEmpty() && ItemStack.Quantity > 1);
 	if (IsValid(SplitActionButton)) SplitActionButton->SetIsEnabled(!ItemStack.IsEmpty() && ItemStack.Quantity > 1);
@@ -164,6 +173,13 @@ void UT_InventorySlotWidget::InitializeSlot(UT_InventoryComponent* InventoryComp
 
 void UT_InventorySlotWidget::RefreshSlot()
 {
+	if (!IsValid(ItemQuantity) && IsValid(WidgetTree))
+	{
+		// WBP_Inventory_Slot1 等资源使用 ItemAmount，兼容旧 ItemQuantity / Amount 命名
+		ItemQuantity = Cast<UTextBlock>(WidgetTree->FindWidget(TEXT("ItemAmount")));
+		if (!IsValid(ItemQuantity)) ItemQuantity = Cast<UTextBlock>(WidgetTree->FindWidget(TEXT("Amount")));
+	}
+
 	const FTInventoryStack ItemStack = IsValid(Inventory) ? Inventory->GetSlot(InventorySlotIndex) : FTInventoryStack();
 	if (IsValid(ItemImage))
 	{
@@ -175,7 +191,12 @@ void UT_InventorySlotWidget::RefreshSlot()
 
 FReply UT_InventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && IsValid(Inventory) && !Inventory->GetSlot(InventorySlotIndex).IsEmpty())
+	if (!IsValid(Inventory) || Inventory->GetSlot(InventorySlotIndex).IsEmpty())
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
 	{
 		if (!IsValid(ActionMenuWidget))
 		{
@@ -184,6 +205,11 @@ FReply UT_InventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 		}
 
 		ActionMenuWidget->SetSelection(Inventory, InventorySlotIndex, InGeometry);
+		return FReply::Handled();
+	}
+
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
 		return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
 	}
 

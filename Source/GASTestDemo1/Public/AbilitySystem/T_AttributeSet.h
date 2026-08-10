@@ -22,6 +22,8 @@ class GASTESTDEMO1_API UT_AttributeSet : public UAttributeSet
 	GENERATED_BODY()
 	
 public:
+	UT_AttributeSet();
+
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 	
@@ -45,6 +47,15 @@ public:
 	
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxMana)
 	FGameplayAttributeData MaxMana;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MagazineAmmo)
+	FGameplayAttributeData MagazineAmmo;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxMagazineAmmo)
+	FGameplayAttributeData MaxMagazineAmmo;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ReserveAmmo)
+	FGameplayAttributeData ReserveAmmo;
 	
 	UFUNCTION()
 	void OnRep_Health(const FGameplayAttributeData& OldValue);
@@ -54,6 +65,15 @@ public:
 	
 	UFUNCTION()
 	void OnRep_Mana(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_MagazineAmmo(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_MaxMagazineAmmo(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_ReserveAmmo(const FGameplayAttributeData& OldValue);
 	
 	UFUNCTION()
 	void OnRep_MaxMana(const FGameplayAttributeData& OldValue);
@@ -62,4 +82,7 @@ public:
 	ATTRIBUTE_ACCESSORS(ThisClass, MaxHealth);
 	ATTRIBUTE_ACCESSORS(ThisClass, Mana);
 	ATTRIBUTE_ACCESSORS(ThisClass, MaxMana);
+	ATTRIBUTE_ACCESSORS(ThisClass, MagazineAmmo);
+	ATTRIBUTE_ACCESSORS(ThisClass, MaxMagazineAmmo);
+	ATTRIBUTE_ACCESSORS(ThisClass, ReserveAmmo);
 };

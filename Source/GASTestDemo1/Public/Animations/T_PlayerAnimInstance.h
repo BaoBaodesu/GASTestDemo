@@ -90,4 +90,10 @@ private:
 	FVector CurrentAcceleration{FVector::ZeroVector};
 	FRotator BaseAimRotation{FRotator::ZeroRotator};
 	bool bOrientRotationToMovement{true};
+
+protected:
+
+	// 为 true 时每帧强制 bAiming=true（Guard AI 等无 AimingComponent 的角色）
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation|Weapon")
+	bool bAlwaysAiming{false};
 };

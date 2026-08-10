@@ -1,12 +1,12 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 
+#include "AbilitySystem/Abilities/Enemy/T_HitReact.h"
+#include "AbilitySystem/Abilities/T_PrimaryComboAbility.h"
 #include "GameplayTags/TTags.h"
 
-
-// 当 Ability 被授予给 AbilitySystemComponent 时调用。
 void UT_AbilitySystemComponent::OnGiveAbility(FGameplayAbilitySpec& AbilitySpec)
 {
 	Super::OnGiveAbility(AbilitySpec);
@@ -14,14 +14,11 @@ void UT_AbilitySystemComponent::OnGiveAbility(FGameplayAbilitySpec& AbilitySpec)
 	HandleAutoActivatedAbility(AbilitySpec);
 }
 
-// 当可激活 Ability 列表在客户端同步完成时调用。
 void UT_AbilitySystemComponent::OnRep_ActivateAbilities()
 {
 	Super::OnRep_ActivateAbilities();
 	
-	// 给 Ability 列表加锁，防止遍历时 Ability 列表被修改
 	FScopedAbilityListLock AbilityListLock(*this);
-	// 遍历当前 ASC 中所有可激活的 Ability
 	for (const FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		HandleAutoActivatedAbility(AbilitySpec);
@@ -50,17 +47,17 @@ void UT_AbilitySystemComponent::AddToAbilityLevel(TSubclassOf<UGameplayAbility> 
 	}
 }
 
-
-// 检查传入的 Ability 是否带有 ActivateOnGiven 标签。
 void UT_AbilitySystemComponent::HandleAutoActivatedAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
 	if (!IsValid(AbilitySpec.Ability)) return;
+
+	// HitReact is event-driven; parent BP ActivateOnGiven would sticky-own HitReact tags
+	if (AbilitySpec.Ability->IsA(UT_HitReact::StaticClass())) return;
 	
 	for (const FGameplayTag& Tag : AbilitySpec.Ability->GetAssetTags())
 	{
 		if (Tag.MatchesTagExact(TTags::TAbilities::ActivateOnGiven))
 		{
-			// 尝试激活这个 Ability
 			TryActivateAbility(AbilitySpec.Handle);
 			return;
 		}
@@ -73,10 +70,33 @@ void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 	FGameplayTag RoutedInputTag = InputTag;
 	if (InputTag.MatchesTagExact(TTags::TAbilities::Primary) && HasMatchingGameplayTag(TTags::State::Aiming)) RoutedInputTag = TTags::TAbilities::Shoot;
 
+	if (RoutedInputTag.MatchesTagExact(TTags::TAbilities::Shoot) || RoutedInputTag.MatchesTagExact(TTags::TAbilities::Reload))
+	{
+		FGameplayTagContainer MeleeAbilityTags;
+		MeleeAbilityTags.AddTag(TTags::TAbilities::Primary);
+		MeleeAbilityTags.AddTag(TTags::TAbilities::Tertiary);
+		CancelAbilities(&MeleeAbilityTags);
+	}
+
+	bool bPreferPrimaryCombo = false;
+	if (RoutedInputTag.MatchesTagExact(TTags::TAbilities::Primary))
+	{
+		for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+		{
+			if (IsValid(Spec.Ability) && Spec.Ability->IsA(UT_PrimaryComboAbility::StaticClass())
+				&& Spec.Ability->GetAssetTags().HasTagExact(TTags::TAbilities::Primary))
+			{
+				bPreferPrimaryCombo = true;
+				break;
+			}
+		}
+	}
+
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (!AbilitySpec.Ability) continue;
 		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(RoutedInputTag)) continue;
+		if (bPreferPrimaryCombo && !AbilitySpec.Ability->IsA(UT_PrimaryComboAbility::StaticClass())) continue;
 
 		AbilitySpec.InputPressed = true;
 		if (AbilitySpec.IsActive())

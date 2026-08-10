@@ -70,6 +70,7 @@ void AT_PickUpItems::OnConstruction(const FTransform& Transform)
 void AT_PickUpItems::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyDefaultQuantityFromDefinition();
 	SetFocused(false);
 }
 
@@ -104,12 +105,19 @@ bool AT_PickUpItems::PickUp(AActor* Picker)
 void AT_PickUpItems::SetItemDefinition(UT_ItemDefinition* InItemDefinition)
 {
 	ItemData.ItemDefinition = InItemDefinition;
+	ApplyDefaultQuantityFromDefinition();
 	RefreshComponents();
 }
 
 void AT_PickUpItems::SetQuantity(int32 InQuantity)
 {
 	ItemData.Quantity = FMath::Max(1, InQuantity);
+}
+
+void AT_PickUpItems::ApplyDefaultQuantityFromDefinition()
+{
+	if (!IsValid(ItemData.ItemDefinition)) return;
+	ItemData.Quantity = FMath::Max(1, ItemData.ItemDefinition->DefaultQuantity);
 }
 
 bool AT_PickUpItems::ConsumeQuantity(AActor* Picker, int32 ConsumedQuantity)

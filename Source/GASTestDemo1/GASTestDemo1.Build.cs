@@ -20,6 +20,7 @@ public class GASTestDemo1 : ModuleRules
 			"GameplayTags",
 			"UMG",
 			"AIModule",
+			"NavigationSystem",
 			"Niagara",
 			"MotionWarping",
 			"AnimGraphRuntime"

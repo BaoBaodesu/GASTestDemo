@@ -27,6 +27,8 @@ namespace TTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Casting);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(ComboWindow);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shooting);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Reloading);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Invincible);
 		}
 
 		namespace Grab
@@ -60,6 +62,7 @@ namespace TTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Grab);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Aim);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shoot);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Reload);
 		
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(LockOn);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(SwitchLockOnTargetLeft);
@@ -68,6 +71,9 @@ namespace TTags
 		namespace Enemy
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Attack);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Aim);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shoot);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Reload);
 		}
 	}
 	namespace Events
@@ -104,6 +110,12 @@ namespace TTags
 			namespace Shoot
 			{
 				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Fire);
+				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Hit);
+			}
+
+			namespace Reload
+			{
+				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Complete);
 			}
 		}
 		namespace Enemy

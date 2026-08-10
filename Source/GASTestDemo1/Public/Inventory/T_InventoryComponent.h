@@ -96,6 +96,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	FTInventoryStack GetSlot(int32 SlotIndex) const;
 
+	UFUNCTION(BlueprintPure, Category="Inventory")
+	UT_ItemDefinition* GetEquippedItem() const;
+
 	const TArray<FTInventoryStack>& GetSlots() const { return Slots; }
 
 	UPROPERTY(BlueprintAssignable, Category="Inventory")

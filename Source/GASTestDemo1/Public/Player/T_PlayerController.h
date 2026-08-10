@@ -4,15 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "AbilitySystem/T_AttributeSet.h"
 #include "T_PlayerController.generated.h"
 
 class UInputMappingContext;
 class UInputAction;
 class UUserWidget;
+class AT_PlayerCharacter;
 class UT_InventoryComponent;
 class UT_InventoryWidget;
+class UT_AttributeWidget;
+class UT_AttributeSet;
 struct FInputActionValue;
 struct FGameplayTag;
+struct FOnAttributeChangeData;
 
 UCLASS()
 class GASTESTDEMO1_API AT_PlayerController : public APlayerController
@@ -35,7 +40,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual void SetupInputComponent() override;
 
 private:
@@ -66,6 +71,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	TObjectPtr<UInputAction> AimAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
+	TObjectPtr<UInputAction> ReloadAction;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* LockOnAction;
@@ -107,6 +115,7 @@ private:
 	void ToggleCrouch();
 	void StartAim();
 	void StopAim();
+	void Reload();
 	void PickUp();
 	void ActivateQuickSlot(FKey Key);
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
@@ -126,5 +135,14 @@ private:
 	TObjectPtr<UUserWidget> PlayerHUDWidget;
 
 	bool bWasMouseCursorVisible = false;
+
+	// HUD 属性 Widget 绑定
+	void BindPlayerStatusWidgets();
+	UFUNCTION()
+	void OnPlayerHUDASCInitialized(UAbilitySystemComponent* ASC, UAttributeSet* AS);
+	void DoBindHUDWidgets(UAbilitySystemComponent* ASC, UT_AttributeSet* AttributeSet, AT_PlayerCharacter* PlayerCharacter);
+	void OnHUDWidgetAttributeChanged(const FOnAttributeChangeData& ChangeData, TWeakObjectPtr<UT_AttributeWidget> Widget, FGameplayAttribute Attribute, FGameplayAttribute MaxAttribute);
+
+	TSet<FGameplayAttribute> BoundHUDAttributeKeys;
 
 };

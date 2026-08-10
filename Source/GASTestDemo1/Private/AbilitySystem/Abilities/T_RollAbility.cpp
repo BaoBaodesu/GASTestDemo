@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Characters/T_BaseCharacter.h"
+#include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameplayTags/TTags.h"
@@ -162,5 +163,18 @@ void UT_RollAbility::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
+	if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
+	{
+		if (AbilitySystemComponent->HasMatchingGameplayTag(TTags::State::Action::Invincible))
+		{
+			AbilitySystemComponent->RemoveLooseGameplayTag(TTags::State::Action::Invincible);
+		}
+	}
+
+	if (AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetAvatarActorFromActorInfo()))
+	{
+		PlayerCharacter->SetInvincibilityCollisionEnabled(false);
+	}
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

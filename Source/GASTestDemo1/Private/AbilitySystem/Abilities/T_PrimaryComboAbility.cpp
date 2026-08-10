@@ -5,11 +5,11 @@
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
-#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Characters/T_BaseCharacter.h"
+#include "Engine/HitResult.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
-#include "Utils/T_BlueprintLibrary.h"
 #include "UObject/ConstructorHelpers.h"
 
 UT_PrimaryComboAbility::UT_PrimaryComboAbility()
@@ -38,14 +38,7 @@ void UT_PrimaryComboAbility::ActivateAbility(
 
 	ComboIndex = 0;
 	bQueuedNextCombo = false;
-
-	UAbilityTask_WaitGameplayEvent* WaitPrimaryAttackEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this, TTags::Events::Player::Primary, nullptr, false, false);
-	if (IsValid(WaitPrimaryAttackEvent))
-	{
-		WaitPrimaryAttackEvent->EventReceived.AddDynamic(this, &UT_PrimaryComboAbility::OnPrimaryAttackEvent);
-		WaitPrimaryAttackEvent->ReadyForActivation();
-	}
+	ActorsHitThisSwing.Reset();
 
 	PlayComboMontage();
 }
@@ -81,6 +74,7 @@ void UT_PrimaryComboAbility::PlayComboMontage()
 	}
 
 	bQueuedNextCombo = false;
+	ActorsHitThisSwing.Reset();
 
 	UAbilityTask_PlayMontageAndWait* PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
@@ -108,32 +102,50 @@ void UT_PrimaryComboAbility::PlayComboMontage()
 	PlayMontageTask->ReadyForActivation();
 }
 
-void UT_PrimaryComboAbility::OnPrimaryAttackEvent(FGameplayEventData Payload)
+bool UT_PrimaryComboAbility::ApplyComboHitTarget(AActor* HitActor, const FHitResult* HitResult)
 {
+	if (!IsValid(HitActor)) return false;
+
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-	if (!IsValid(AvatarActor) || !IsValid(SourceASC) || !IsValid(DamageEffectClass)) return;
+	if (!IsValid(AvatarActor) || !IsValid(SourceASC) || !IsValid(DamageEffectClass)) return false;
 
-	const TArray<AActor*> ActorsHit = UT_BlueprintLibrary::HitBoxOverlapTest(
-		AvatarActor, HitBoxRadius, HitBoxForwardOffset, HitBoxElevationOffset);
+	if (!AvatarActor->HasAuthority()) return false;
 
-	for (AActor* HitActor : ActorsHit)
-	{
-		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
-		if (!IsValid(TargetASC)) continue;
+	const AT_BaseCharacter* TargetCharacter = Cast<AT_BaseCharacter>(HitActor);
+	if (!IsValid(TargetCharacter) || !TargetCharacter->IsAlive()) return false;
+	if (HitActor == AvatarActor) return false;
 
-		FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
-		ContextHandle.AddSourceObject(this);
-		FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), ContextHandle);
-		if (SpecHandle.IsValid())
+	const bool bAlreadyHit = ActorsHitThisSwing.ContainsByPredicate(
+		[HitActor](const TWeakObjectPtr<AActor>& Entry)
 		{
-			SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-		}
+			return Entry.Get() == HitActor;
+		});
+	if (bAlreadyHit) return false;
 
-		FGameplayEventData HitReactPayload;
-		HitReactPayload.Instigator = AvatarActor;
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(HitActor, TTags::Events::Enemy::HitReact, HitReactPayload);
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+	if (!IsValid(TargetASC)) return false;
+
+	FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
+	ContextHandle.AddSourceObject(this);
+	ContextHandle.AddInstigator(AvatarActor, AvatarActor);
+	if (HitResult)
+	{
+		ContextHandle.AddHitResult(*HitResult);
 	}
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), ContextHandle);
+	if (!SpecHandle.IsValid()) return false;
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	ActorsHitThisSwing.Add(HitActor);
+
+	FGameplayEventData HitReactPayload;
+	HitReactPayload.Instigator = AvatarActor;
+	HitReactPayload.Target = HitActor;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(HitActor, TTags::Events::Enemy::HitReact, HitReactPayload);
+
+	return true;
 }
 
 void UT_PrimaryComboAbility::TryPlayNextCombo()
@@ -172,6 +184,7 @@ void UT_PrimaryComboAbility::EndAbility(
 	ComboIndex = 0;
 	bQueuedNextCombo = false;
 	bComboMontageSwitching = false;
+	ActorsHitThisSwing.Reset();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

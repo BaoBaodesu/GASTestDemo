@@ -41,7 +41,15 @@ void UT_LockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!IsValid(CurrentTargetActor)) return;
+	if (!IsValid(CurrentTargetActor))
+	{
+		// 目标已销毁：解除锁定并恢复状态
+		if (CurrentTargetActor != nullptr)
+		{
+			StopLockOn();
+		}
+		return;
+	}
 
 	if (!IsValidTarget(CurrentTargetActor))
 	{
@@ -159,6 +167,12 @@ AActor* UT_LockOnComponent::FindBestTarget() const
 bool UT_LockOnComponent::IsValidTarget(AActor* Target) const
 {
 	if (!OwnerCharacter || !IsValid(Target)) return false;
+
+	// 目标已死亡：解除锁定
+	if (const AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(Target))
+	{
+		if (!BaseCharacter->IsAlive()) return false;
+	}
 
 	const float Distance = FVector::Dist(OwnerCharacter->GetActorLocation(), Target->GetActorLocation());
 

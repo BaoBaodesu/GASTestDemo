@@ -8,6 +8,7 @@ class AT_PickUpItems;
 class USkeletalMesh;
 class UStaticMesh;
 class UTexture2D;
+class UGameplayEffect;
 
 UENUM(BlueprintType)
 enum class ETItemType : uint8
@@ -44,6 +45,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item", meta=(ClampMin="1"))
 	int32 MaxStackSize = 1;
 
+	/** 拾取该物品时默认获得的数量（世界掉落物 BeginPlay / 指定 ItemDefinition 时同步） */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item", meta=(ClampMin="1"))
+	int32 DefaultQuantity = 1;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item")
 	TObjectPtr<UTexture2D> Thumbnail;
 
@@ -64,4 +69,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item|Use")
 	bool bCanUse = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item|Use")
+	TSubclassOf<UGameplayEffect> UseEffect;
 };

@@ -73,6 +73,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	static FClosestActorWithTagResult FindClosestActorWithTag(UObject* WorldContextObject, const FVector& Origin, const FName& Tag, float SearchRange);
 	
+	UFUNCTION(BlueprintPure, Category = "Crash|Abilities")
+	static bool IsInvincible(AActor* Actor);
+
 	// 给玩家发送伤害事件，并传入伤害效果、事件数据、Tag 和伤害数值
 	UFUNCTION(BlueprintCallable)
 	static void SendDamageEventToPlayer(AActor* Target, const TSubclassOf<UGameplayEffect>& DamageEffect, UPARAM(ref) FGameplayEventData& Payload, const FGameplayTag& DataTag, float Damage, const FGameplayTag &EventTagOverride, UObject* OptionalParticleSystem = nullptr);

@@ -31,10 +31,12 @@ public:
 	virtual UAttributeSet* GetAttributeSet() const override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Camera|Traversal")
 	void SetCameraCollisionEnabled(bool bEnabled);
 	void SetTraversalCollisionEnabled(bool bEnabled);
+	void SetInvincibilityCollisionEnabled(bool bInvincible);
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	USkeletalMeshComponent* GetEquippedWeaponMesh() const;
@@ -42,7 +44,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SetEquippedWeaponMesh(USkeletalMeshComponent* InWeaponMesh) { EquippedWeaponMesh = InWeaponMesh; }
 
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Weapon")
 	bool bHasPistolGun{false};
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -52,6 +54,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	UT_InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyHitConfirmed();
 
 	virtual bool CanUseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
 	virtual bool UseInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition) override;
@@ -63,6 +68,7 @@ public:
 	bool bTraversalCameraModeActive = false;
 	ECollisionEnabled::Type PreviousTraversalCollisionEnabled = ECollisionEnabled::QueryAndPhysics;
 	bool bTraversalCollisionDisabled = false;
+	bool bInvincibilityCollisionActive = false;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))

@@ -6,12 +6,26 @@
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Blueprint/WidgetTree.h"
 #include "Characters/T_BaseCharacter.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "UI/T_AttributeWidget.h"
 
+
+UT_WidgetComponent::UT_WidgetComponent()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
+}
 
 void UT_WidgetComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetComponentTickEnabled(bHideWhenOccluded);
+	if (bHideWhenOccluded)
+	{
+		UpdateOcclusionVisibility();
+	}
 	
 	InitAbilitySystemData();
 	
@@ -25,6 +39,18 @@ void UT_WidgetComponent::BeginPlay()
 	}
 	
 	InitializeAttributeDelegate();
+}
+
+void UT_WidgetComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!bHideWhenOccluded) return;
+
+	OcclusionCheckTimer += DeltaTime;
+	if (OcclusionCheckTimer < OcclusionCheckInterval) return;
+	OcclusionCheckTimer = 0.f;
+	UpdateOcclusionVisibility();
 }
 
 /**
@@ -89,7 +115,7 @@ void UT_WidgetComponent::OnASCInitialized(UAbilitySystemComponent* ASC, UAttribu
 	AttributeSet = Cast<UT_AttributeSet>(AS);
 	
 	if (!IsASCInitialized()) return;
-	// 继续初始化属性变化绑定
+	// 继续初始化属性绑定流程
 	InitializeAttributeDelegate();
 }
 
@@ -154,4 +180,45 @@ void UT_WidgetComponent::BindWidgetToAttributeChanges(UWidget* WidgetObject,
 		// 属性变化后，重新读取当前值和最大值，并更新 UI
 		AttributeWidget->OnAttributeChange(Pair, AttributeSet.Get(), AttributeChangeData.OldValue);
 	});
+}
+
+void UT_WidgetComponent::UpdateOcclusionVisibility()
+{
+	const bool bOccluded = IsOccludedFromLocalPlayerView();
+	if (bOccluded == bCurrentlyOccluded && IsVisible() == !bOccluded) return;
+
+	bCurrentlyOccluded = bOccluded;
+	SetVisibility(!bOccluded);
+}
+
+bool UT_WidgetComponent::IsOccludedFromLocalPlayerView() const
+{
+	const UWorld* World = GetWorld();
+	if (!IsValid(World)) return true;
+
+	const APlayerController* PlayerController = World->GetFirstPlayerController();
+	if (!IsValid(PlayerController) || !PlayerController->IsLocalController()) return false;
+
+	FVector ViewLocation;
+	FRotator ViewRotation;
+	PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+	const FVector TraceEnd = GetComponentLocation();
+	if (ViewLocation.Equals(TraceEnd, KINDA_SMALL_NUMBER)) return false;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WidgetComponentOcclusion), false, GetOwner());
+	if (APawn* ViewerPawn = PlayerController->GetPawn())
+	{
+		QueryParams.AddIgnoredActor(ViewerPawn);
+	}
+
+	FHitResult HitResult;
+	const bool bHit = World->LineTraceSingleByChannel(
+		HitResult,
+		ViewLocation,
+		TraceEnd,
+		OcclusionTraceChannel,
+		QueryParams);
+
+	return bHit;
 }

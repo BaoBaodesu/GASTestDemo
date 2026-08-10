@@ -20,12 +20,18 @@ class GASTESTDEMO1_API AT_PlayerProjectile : public AActor
 public:
 	AT_PlayerProjectile();
 
-	void InitializeProjectile(TSubclassOf<UGameplayEffect> InDamageEffectClass, float InDamage,
+	void InitializeProjectile(TSubclassOf<UGameplayEffect> InDamageEffectClass, float InDamage, bool bInHeadshot,
 		UNiagaraSystem* InTrailSystem, UNiagaraSystem* InImpactSystem,
 		USoundBase* InImpactSound, USoundAttenuation* InImpactSoundAttenuation,
 		AActor* WeaponActor);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 让本发投射物在移动扫描中忽略指定 Actor，用于无敌窗口内的穿身
+	void SetMoveIgnoredActor(AActor* Actor, bool bIgnore);
+
+protected:
+	virtual void BeginPlay() override;
 
 private:
 	UFUNCTION()
@@ -62,6 +68,11 @@ private:
 	UPROPERTY()
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 
+	// 命中敌人头部骨骼时的伤害倍率（默认 2 倍）
+	UPROPERTY(EditDefaultsOnly, Category="Projectile|Damage")
+	float HeadshotDamageMultiplier{2.f};
+
 	float Damage{0.f};
+	bool bHeadshot{false};
 	bool bImpactHandled{false};
 };

@@ -7,7 +7,6 @@
 #include "Components/WidgetComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
-#include <string>
 /**
 * 当属性变化时调用
 * Pair.Key 是当前属性
@@ -35,6 +34,7 @@ void UT_AttributeWidget::SpawnDamageNumbers(float NewValue, float OldValue)
 {
 	if (OldValue <= 0.0f) { return; }
 	if (NewValue >= OldValue) { return; }
+	if (!AvatarActor.IsValid()) { return; }
 
 	const float DamageValue = FMath::Abs(NewValue - OldValue);
 

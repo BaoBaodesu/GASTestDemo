@@ -10,6 +10,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InputAction.h"
+#include "Blueprint/UserWidget.h"
+#include "Components/PanelWidget.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
@@ -20,6 +22,8 @@
 #include "Player/Components/T_TraversalComponent.h"
 #include "Inventory/T_InventoryComponent.h"
 #include "UI/Inventory/T_InventoryWidgets.h"
+#include "Blueprint/WidgetTree.h"
+#include "UI/T_AttributeWidget.h"
 
 void AT_PlayerController::SetupInputComponent()
 {
@@ -31,6 +35,10 @@ void AT_PlayerController::SetupInputComponent()
 	if (!IsValid(PickUpAction))
 	{
 		PickUpAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Interactive.IA_Interactive"));
+	}
+	if (!IsValid(ReloadAction))
+	{
+		ReloadAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Reload.IA_Reload"));
 	}
 	
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
@@ -56,6 +64,7 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ThisClass::Roll);
 	
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ThisClass::StartAim);
+	if (IsValid(ReloadAction)) EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ThisClass::Reload);
 
 	EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &ThisClass::StartLockOn);
 	EnhancedInputComponent->BindAction(SwitchLockOnAction, ETriggerEvent::Started, this, &ThisClass::SwitchLockOnTarget);
@@ -88,6 +97,8 @@ void AT_PlayerController::BeginPlay()
 
 	PlayerHUDWidget = CreateWidget<UUserWidget>(this, PlayerHUDWidgetClass);
 	if (IsValid(PlayerHUDWidget)) PlayerHUDWidget->AddToViewport();
+
+	BindPlayerStatusWidgets();
 }
 
 void AT_PlayerController::ToggleInventory()
@@ -257,6 +268,12 @@ void AT_PlayerController::StopAim()
 	ReleaseAbility(TTags::TAbilities::Aim);
 }
 
+void AT_PlayerController::Reload()
+{
+	if (IsValid(InventoryWidget)) return;
+	ActivateAbility(TTags::TAbilities::Reload);
+}
+
 void AT_PlayerController::ActivateAbility(const FGameplayTag& AbilityTag) const
 {
 	if (!IsAlive()) return;
@@ -344,4 +361,111 @@ void AT_PlayerController::SendPlayerGameplayEvent(const FGameplayTag& EventTag, 
 	Payload.Target = ControlledCharacter;
 	Payload.EventMagnitude = EventMagnitude;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ControlledCharacter, EventTag, Payload);
+}
+
+void AT_PlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	BindPlayerStatusWidgets();
+}
+
+void AT_PlayerController::BindPlayerStatusWidgets()
+{
+	if (!IsValid(PlayerHUDWidget)) return;
+
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter)) return;
+
+	UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent();
+	UT_AttributeSet* AttributeSet = Cast<UT_AttributeSet>(PlayerCharacter->GetAttributeSet());
+
+	if (!IsValid(ASC) || !IsValid(AttributeSet))
+	{
+		PlayerCharacter->OnASCInitialized.AddUniqueDynamic(this, &ThisClass::OnPlayerHUDASCInitialized);
+		return;
+	}
+
+	DoBindHUDWidgets(ASC, AttributeSet, PlayerCharacter);
+}
+
+void AT_PlayerController::OnPlayerHUDASCInitialized(UAbilitySystemComponent* ASC, UAttributeSet* AS)
+{
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter)) return;
+
+	PlayerCharacter->OnASCInitialized.RemoveDynamic(this, &ThisClass::OnPlayerHUDASCInitialized);
+
+	UT_AttributeSet* AttributeSet = Cast<UT_AttributeSet>(AS);
+	if (!IsValid(ASC) || !IsValid(AttributeSet)) return;
+
+	DoBindHUDWidgets(ASC, AttributeSet, PlayerCharacter);
+}
+
+void AT_PlayerController::DoBindHUDWidgets(UAbilitySystemComponent* ASC, UT_AttributeSet* AttributeSet, AT_PlayerCharacter* PlayerCharacter)
+{
+	if (!IsValid(PlayerHUDWidget)) return;
+
+	// 先清理旧绑定，避免重生/重复 Possess 后同一控件被重复绑定
+	for (const FGameplayAttribute& Key : BoundHUDAttributeKeys)
+	{
+		ASC->GetGameplayAttributeValueChangeDelegate(Key).RemoveAll(this);
+	}
+	BoundHUDAttributeKeys.Reset();
+
+	// 递归遍历：先对控件实例本身（包括 UserWidget 实例）做属性控件匹配，
+	// 再下钻 Panel 子控件与 UserWidget 自己的 WidgetTree。
+	// 不能只用 ForEachWidgetAndDescendants：引擎实现会跳过带 WidgetTree 的子 UserWidget 实例本身。
+	TFunction<void(UWidget*)> VisitWidget = [&](UWidget* Widget)
+	{
+		if (UT_AttributeWidget* AttrWidget = Cast<UT_AttributeWidget>(Widget))
+		{
+			const FGameplayAttribute Attribute = AttrWidget->Attribute;
+			const FGameplayAttribute MaxAttribute = AttrWidget->MaxAttribute;
+			if (Attribute.IsValid() && MaxAttribute.IsValid())
+			{
+				// 设置 AvatarActor，供伤害数字 Niagar 等使用
+				AttrWidget->AvatarActor = PlayerCharacter;
+				// 初始刷新
+				AttrWidget->OnAttributeChange(TTuple<FGameplayAttribute, FGameplayAttribute>(Attribute, MaxAttribute), AttributeSet, 0.f);
+				// 绑定 ASC 属性变化委托
+				ASC->GetGameplayAttributeValueChangeDelegate(Attribute)
+					.AddUObject(this, &ThisClass::OnHUDWidgetAttributeChanged, TWeakObjectPtr<UT_AttributeWidget>(AttrWidget), Attribute, MaxAttribute);
+				BoundHUDAttributeKeys.Add(Attribute);
+			}
+		}
+
+		if (UPanelWidget* Panel = Cast<UPanelWidget>(Widget))
+		{
+			for (int32 ChildIndex = 0; ChildIndex < Panel->GetChildrenCount(); ++ChildIndex)
+			{
+				VisitWidget(Panel->GetChildAt(ChildIndex));
+			}
+		}
+		else if (UUserWidget* UserWidgetChild = Cast<UUserWidget>(Widget))
+		{
+			if (IsValid(UserWidgetChild->WidgetTree) && IsValid(UserWidgetChild->WidgetTree->RootWidget))
+			{
+				VisitWidget(UserWidgetChild->WidgetTree->RootWidget);
+			}
+		}
+	};
+
+	if (IsValid(PlayerHUDWidget->WidgetTree) && IsValid(PlayerHUDWidget->WidgetTree->RootWidget))
+	{
+		VisitWidget(PlayerHUDWidget->WidgetTree->RootWidget);
+	}
+}
+
+void AT_PlayerController::OnHUDWidgetAttributeChanged(const FOnAttributeChangeData& ChangeData, TWeakObjectPtr<UT_AttributeWidget> Widget, FGameplayAttribute Attribute, FGameplayAttribute MaxAttribute)
+{
+	UT_AttributeWidget* AttrWidget = Widget.Get();
+	if (!IsValid(AttrWidget)) return;
+
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
+	if (!IsValid(PlayerCharacter)) return;
+
+	UT_AttributeSet* AttributeSet = Cast<UT_AttributeSet>(PlayerCharacter->GetAttributeSet());
+	if (!IsValid(AttributeSet)) return;
+
+	AttrWidget->OnAttributeChange(TTuple<FGameplayAttribute, FGameplayAttribute>(Attribute, MaxAttribute), AttributeSet, ChangeData.OldValue);
 }

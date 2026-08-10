@@ -3,6 +3,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "Characters/T_BaseCharacter.h"
+#include "Characters/T_GuardCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -60,7 +61,7 @@ void UT_PlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	GrabType = IsValid(GrabComponent) ? GrabComponent->GetGrabType() : ET_GrabType::None;
 	SignedBarSpeed = IsValid(GrabComponent) && bGrabbed && GrabComponent->CanMove() ? GrabComponent->GetShimmyDirection() : 0.f;
 
-	bAiming = IsValid(AimingComponent) && AimingComponent->IsAiming();
+	bAiming = bAlwaysAiming || (IsValid(AimingComponent) && AimingComponent->IsAiming());
 
 	UpdateProjectSpecificData();
 }
@@ -90,8 +91,15 @@ void UT_PlayerAnimInstance::CacheReferences()
 
 void UT_PlayerAnimInstance::UpdateProjectSpecificData()
 {
-	const AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(Character);
-	bHasPistolGun = IsValid(PlayerCharacter) && PlayerCharacter->HasPistolGun();
+	if (const AT_GuardCharacter* GuardCharacter = Cast<AT_GuardCharacter>(Character))
+	{
+		bHasPistolGun = GuardCharacter->IsWeaponReady();
+	}
+	else
+	{
+		const AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(Character);
+		bHasPistolGun = IsValid(PlayerCharacter) && PlayerCharacter->HasPistolGun();
+	}
 
 	const AT_BaseCharacter* BaseCharacter = Cast<AT_BaseCharacter>(Character);
 	const UAbilitySystemComponent* AbilitySystemComponent = IsValid(BaseCharacter) ? BaseCharacter->GetAbilitySystemComponent() : nullptr;
@@ -123,7 +131,7 @@ void UT_PlayerAnimInstance::ResetAnimationData()
 	bIsCrouching = false;
 	bGrabbed = false;
 	bHasPistolGun = false;
-	bAiming = false;
+	bAiming = bAlwaysAiming;
 	bShouldDoIKTrace = false;
 	bOrientRotationToMovement = true;
 	GrabType = ET_GrabType::None;

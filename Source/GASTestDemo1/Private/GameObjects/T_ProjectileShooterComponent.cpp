@@ -37,7 +37,7 @@ UT_ProjectileShooterComponent::UT_ProjectileShooterComponent()
 
 AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector& AimPoint,
 	TSubclassOf<AT_PlayerProjectile> ProjectileClass,
-	TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor)
+	TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor, bool bHeadshot)
 {
 	UWorld* World = GetWorld();
 	if (!IsValid(World) || !IsValid(SourceActor) || !SourceActor->HasAuthority() || !IsValid(ProjectileClass)) return nullptr;
@@ -65,7 +65,7 @@ AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector
 	const FTransform SpawnTransform(AimDirection.Rotation(), MuzzleLocation);
 	AT_PlayerProjectile* Projectile = World->SpawnActorDeferred<AT_PlayerProjectile>(ProjectileClass, SpawnTransform, SourceActor, Cast<APawn>(SourceActor), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!IsValid(Projectile)) return nullptr;
-	Projectile->InitializeProjectile(DamageEffectClass, Damage, TrailSystem, ImpactSystem, ImpactSound, ImpactSoundAttenuation, GetOwner());
+	Projectile->InitializeProjectile(DamageEffectClass, Damage, bHeadshot, TrailSystem, ImpactSystem, ImpactSound, ImpactSoundAttenuation, GetOwner());
 	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
 	return Projectile;
 }
