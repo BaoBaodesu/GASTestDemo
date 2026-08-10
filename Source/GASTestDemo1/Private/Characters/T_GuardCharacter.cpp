@@ -25,7 +25,7 @@
 
 namespace
 {
-	const FGameplayTag& GetGuardDeadTag()
+	const FGameplayTag& GetGuardCharacterDeadTag()
 	{
 		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("TTags.Status.Dead"));
 		return DeadTag;
@@ -297,7 +297,7 @@ void AT_GuardCharacter::ClearStaleBlockingTags()
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!IsValid(ASC)) return;
 
-	const FGameplayTag& DeadTag = GetGuardDeadTag();
+	const FGameplayTag& DeadTag = GetGuardCharacterDeadTag();
 	if (DeadTag.IsValid() && ASC->HasMatchingGameplayTag(DeadTag))
 	{
 		ASC->RemoveLooseGameplayTag(DeadTag);
@@ -480,7 +480,15 @@ void AT_GuardCharacter::HandleDeath()
 	}
 
 	Super::HandleDeath();
+
+	if (ShouldSkipDeathPresentation()) return;
+
 	PlayFallbackDeathMontage();
+}
+
+void AT_GuardCharacter::ScheduleDeathDestroy(float DelaySeconds)
+{
+	ScheduleDestroyAfterDeath(DelaySeconds);
 }
 
 void AT_GuardCharacter::HandleRespawn()

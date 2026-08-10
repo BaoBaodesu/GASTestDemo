@@ -64,6 +64,7 @@ protected:
 	virtual void HandleDeath() override;
 	virtual void HandleRespawn() override;
 	virtual void ResetAttributes() override;
+	virtual void ScheduleDeathDestroy(float DelaySeconds) override;
 
 private:
 

@@ -15,7 +15,7 @@
 
 namespace
 {
-	const FGameplayTag& GetGuardDeadTag()
+	const FGameplayTag& GetGuardAimDeadTag()
 	{
 		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("TTags.Status.Dead"));
 		return DeadTag;
@@ -29,7 +29,7 @@ UT_GuardAim::UT_GuardAim()
 	SetAssetTags(FGameplayTagContainer(TTags::TAbilities::Enemy::Aim.GetTag()));
 	ActivationOwnedTags.AddTag(TTags::State::Aiming);
 	ActivationBlockedTags.AddTag(TTags::State::Action::HitReact);
-	const FGameplayTag& DeadTag = GetGuardDeadTag();
+	const FGameplayTag& DeadTag = GetGuardAimDeadTag();
 	if (DeadTag.IsValid()) ActivationBlockedTags.AddTag(DeadTag);
 
 	static ConstructorHelpers::FObjectFinder<UAnimSequence> AimIdleFinder(

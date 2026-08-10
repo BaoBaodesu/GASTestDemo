@@ -39,6 +39,9 @@ Thumbs.db
 # Visual Studio Code
 .vscode/
 
+# Claude / Cursor local agent config
+.claude/
+
 # Unreal Engine local files
 *.tmp
 *.temp

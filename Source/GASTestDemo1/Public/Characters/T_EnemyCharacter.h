@@ -8,6 +8,8 @@
 
 class UAttributeSet;
 class UT_ActorWidgetComponent;
+class UContextualAnimSceneActorComponent;
+class UMotionWarpingComponent;
 UCLASS()
 class GASTESTDEMO1_API AT_EnemyCharacter : public AT_BaseCharacter
 {
@@ -20,6 +22,12 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual UAttributeSet* GetAttributeSet() const override;
+
+	UFUNCTION(BlueprintCallable, Category = "Crash|Death")
+	void RequestSkipDeathPresentation(float InDestroyDelay);
+
+	bool ShouldSkipDeathPresentation() const { return bSkipDeathPresentation; }
+	float GetSkipDeathDestroyDelay() const { return SkipDeathDestroyDelay; }
 	
 	// 移动半径范围
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crash|AI")
@@ -37,6 +45,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crash|AI")
 	float SearchRange = 1000.0f;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crash|Components")
+	TObjectPtr<UContextualAnimSceneActorComponent> ContextualAnimSceneActorComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crash|Components")
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Crash|UI")
 	TObjectPtr<UT_ActorWidgetComponent> LockOnWidget;
 	
@@ -50,7 +64,12 @@ public:
 protected:
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void HandleDeath() override;
+	virtual void ScheduleDeathDestroy(float DelaySeconds);
+
+	bool bSkipDeathPresentation{false};
+	float SkipDeathDestroyDelay{0.2f};
 	
 private:
 
@@ -62,4 +81,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAttributeSet> AttributeSet;
+
+	FTimerHandle SkipDeathDestroyTimerHandle;
 };

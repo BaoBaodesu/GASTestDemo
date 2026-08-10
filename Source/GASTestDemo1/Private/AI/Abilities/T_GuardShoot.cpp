@@ -20,7 +20,7 @@
 
 namespace
 {
-	const FGameplayTag& GetGuardDeadTag()
+	const FGameplayTag& GetGuardShootDeadTag()
 	{
 		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("TTags.Status.Dead"));
 		return DeadTag;
@@ -36,7 +36,7 @@ UT_GuardShoot::UT_GuardShoot()
 	ActivationOwnedTags.AddTag(TTags::State::Action::Shooting);
 	ActivationBlockedTags.AddTag(TTags::State::Action::Reloading);
 	ActivationBlockedTags.AddTag(TTags::State::Action::HitReact);
-	const FGameplayTag& LocalDeadTag = GetGuardDeadTag();
+	const FGameplayTag& LocalDeadTag = GetGuardShootDeadTag();
 	if (LocalDeadTag.IsValid()) ActivationBlockedTags.AddTag(LocalDeadTag);
 
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> FireMontageAsset(TEXT("/Game/Characters/Mannequins/Anims/Pistol/MM_Pistol_Fire_Montage.MM_Pistol_Fire_Montage"));
@@ -53,7 +53,7 @@ bool UT_GuardShoot::IsInterruptingTag(const FGameplayTag& Tag)
 
 	return Tag == TTags::State::Action::Reloading
 		|| Tag == TTags::State::Action::HitReact
-		|| Tag == GetGuardDeadTag();
+		|| Tag == GetGuardShootDeadTag();
 }
 
 void UT_GuardShoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -81,7 +81,7 @@ void UT_GuardShoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 
 	// 注册中断标签监听：死亡/受击/换弹出现时立即中断射击
 	AbilitySystemComponent = ASC;
-	DeadTag = GetGuardDeadTag();
+	DeadTag = GetGuardShootDeadTag();
 	ReloadTagHandle = ASC->RegisterGameplayTagEvent(TTags::State::Action::Reloading).AddUObject(this, &ThisClass::OnInterruptTagChanged);
 	HitReactTagHandle = ASC->RegisterGameplayTagEvent(TTags::State::Action::HitReact).AddUObject(this, &ThisClass::OnInterruptTagChanged);
 	if (DeadTag.IsValid()) DeadTagHandle = ASC->RegisterGameplayTagEvent(DeadTag).AddUObject(this, &ThisClass::OnInterruptTagChanged);

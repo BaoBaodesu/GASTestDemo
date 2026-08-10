@@ -22,7 +22,7 @@
 
 namespace
 {
-	const FGameplayTag& GetGuardDeadTag()
+	const FGameplayTag& GetGuardTestDeadTag()
 	{
 		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("TTags.Status.Dead"));
 		return DeadTag;
@@ -103,9 +103,9 @@ bool FTGuardAbilityExclusionTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("射击激活期间持有 Shooting 标签"), Shoot->GetActivationOwnedTags().HasTagExact(TTags::State::Action::Shooting));
 		TestTrue(TEXT("换弹状态阻挡射击"), Shoot->GetActivationBlockedTags().HasTagExact(TTags::State::Action::Reloading));
 		TestTrue(TEXT("受击硬直阻挡射击"), Shoot->GetActivationBlockedTags().HasTagExact(TTags::State::Action::HitReact));
-		if (GetGuardDeadTag().IsValid())
+		if (GetGuardTestDeadTag().IsValid())
 		{
-			TestTrue(TEXT("死亡状态阻挡射击"), Shoot->GetActivationBlockedTags().HasTagExact(GetGuardDeadTag()));
+			TestTrue(TEXT("死亡状态阻挡射击"), Shoot->GetActivationBlockedTags().HasTagExact(GetGuardTestDeadTag()));
 		}
 	}
 
@@ -135,7 +135,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FTGuardDeathInterruptTest::RunTest(const FString& Parameters)
 {
-	TestTrue(TEXT("死亡标签可中断射击"), UT_GuardShoot::IsInterruptingTag(GetGuardDeadTag()));
+	TestTrue(TEXT("死亡标签可中断射击"), UT_GuardShoot::IsInterruptingTag(GetGuardTestDeadTag()));
 	TestTrue(TEXT("受击硬直可中断射击"), UT_GuardShoot::IsInterruptingTag(TTags::State::Action::HitReact));
 	TestTrue(TEXT("换弹状态可中断射击"), UT_GuardShoot::IsInterruptingTag(TTags::State::Action::Reloading));
 	TestTrue(TEXT("无关标签不中断射击"), !UT_GuardShoot::IsInterruptingTag(TTags::State::Action::Attacking));

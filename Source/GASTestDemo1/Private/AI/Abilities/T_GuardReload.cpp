@@ -13,7 +13,7 @@
 
 namespace
 {
-	const FGameplayTag& GetGuardDeadTag()
+	const FGameplayTag& GetGuardReloadDeadTag()
 	{
 		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("TTags.Status.Dead"));
 		return DeadTag;
@@ -28,7 +28,7 @@ UT_GuardReload::UT_GuardReload()
 	ActivationOwnedTags.AddTag(TTags::State::Action::Reloading);
 	ActivationBlockedTags.AddTag(TTags::State::Action::Shooting);
 	ActivationBlockedTags.AddTag(TTags::State::Action::HitReact);
-	const FGameplayTag& DeadTag = GetGuardDeadTag();
+	const FGameplayTag& DeadTag = GetGuardReloadDeadTag();
 	if (DeadTag.IsValid()) ActivationBlockedTags.AddTag(DeadTag);
 
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> ReloadMontageAsset(TEXT("/Game/Characters/Mannequins/Anims/Pistol/MM_Pistol_Reload_Montage.MM_Pistol_Reload_Montage"));

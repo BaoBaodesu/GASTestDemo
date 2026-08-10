@@ -23,6 +23,7 @@ public class GASTestDemo1 : ModuleRules
 			"NavigationSystem",
 			"Niagara",
 			"MotionWarping",
+			"ContextualAnimation",
 			"AnimGraphRuntime"
 		});
 		
