@@ -27,12 +27,20 @@ class GASTESTDEMO1_API AT_PlayerCharacter : public AT_BaseCharacter, public IT_I
 public:
 
 	AT_PlayerCharacter();
+	virtual void Tick(float DeltaSeconds) override;
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual UAttributeSet* GetAttributeSet() const override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
 	virtual void OnRep_PlayerState() override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void SetRunInputHeld(bool bHeld);
+	bool IsRunInputHeld() const { return bRunInputHeld; }
+	void RefreshNormalMovementSpeed();
 	
 	UFUNCTION(BlueprintCallable, Category = "Camera|Traversal")
 	void SetCameraCollisionEnabled(bool bEnabled);
@@ -45,7 +53,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SetEquippedWeaponMesh(USkeletalMeshComponent* InWeaponMesh) { EquippedWeaponMesh = InWeaponMesh; }
 
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Weapon")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_HasPistolGun, Category = "Weapon")
 	bool bHasPistolGun{false};
 
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -55,6 +63,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	UT_InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
+	UFUNCTION(BlueprintPure, Category="Inventory")
+	AActor* GetEquippedInventoryActor() const { return EquippedInventoryActor; }
 
 	UFUNCTION(Client, Reliable)
 	void ClientNotifyHitConfirmed();
@@ -71,7 +82,20 @@ public:
 	bool bTraversalCollisionDisabled = false;
 	bool bInvincibilityCollisionActive = false;
 
+protected:
+	virtual void HandleDeath() override;
+
 private:
+	void UpdateFootstepNoise(float DeltaSeconds);
+	bool CanReportFootstepNoise(float HorizontalSpeed) const;
+	bool HasSpecialMovementState() const;
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetRunInputHeld(bool bHeld);
+
+	UFUNCTION()
+	void OnRep_HasPistolGun();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
 	
@@ -104,5 +128,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> EquippedInventoryActor;
+
+	float FootstepNoiseElapsed{0.f};
+	bool bRunInputHeld{false};
 
 };

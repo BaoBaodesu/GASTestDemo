@@ -4,10 +4,12 @@
 #include "GASTestDemo1/Public/Characters/T_PlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
 #include "Animation/AnimMontage.h"
 #include "MotionWarpingComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "AbilitySystem/Abilities/T_Reload.h"
+#include "AbilitySystem/Abilities/T_Throw.h"
 #include "Camera/CameraComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
@@ -20,16 +22,19 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayTags/TTags.h"
 #include "Player/Components/T_LockOnComponent.h"
+#include "Player/T_PlayerController.h"
 #include "Player/T_PlayerState.h"
 #include "Player/Components/T_AimingComponent.h"
 #include "Player/Components/T_GrabComponent.h"
 #include "Player/Components/T_PickUpComponent.h"
 #include "Player/Components/T_TraversalComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Inventory/T_InventoryComponent.h"
 #include "Inventory/T_ItemDefinition.h"
 #include "Net/UnrealNetwork.h"
+#include "Perception/AISense_Hearing.h"
+#include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
-
 
 // Sets default values
 AT_PlayerCharacter::AT_PlayerCharacter()
@@ -47,7 +52,7 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 450.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.f;
@@ -82,6 +87,117 @@ AT_PlayerCharacter::AT_PlayerCharacter()
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> EquipPistolMontageAsset(
 		TEXT("/Game/GASTestDemo/Characters/PlayerCharacters/Animations/Test/Shoot/AM_Equip_Pistol_Standing.AM_Equip_Pistol_Standing"));
 	EquipPistolMontage = EquipPistolMontageAsset.Object;
+}
+
+void AT_PlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (HasAuthority()) UpdateFootstepNoise(DeltaSeconds);
+}
+
+void AT_PlayerCharacter::SetRunInputHeld(bool bHeld)
+{
+	if (bRunInputHeld == bHeld) return;
+	bRunInputHeld = bHeld;
+	RefreshNormalMovementSpeed();
+	if (!HasAuthority()) ServerSetRunInputHeld(bHeld);
+}
+
+void AT_PlayerCharacter::ServerSetRunInputHeld_Implementation(bool bHeld)
+{
+	bRunInputHeld = bHeld;
+	RefreshNormalMovementSpeed();
+}
+
+void AT_PlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	if (IsLocallyControlled())
+	{
+		if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(GetController()))
+		{
+			PlayerController->HandleCatchMovementModeChanged(GetCharacterMovement()->MovementMode);
+		}
+	}
+
+	if (UWorld* World = GetWorld()) World->GetTimerManager().SetTimerForNextTick(this, &ThisClass::RefreshNormalMovementSpeed);
+}
+
+void AT_PlayerCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	RefreshNormalMovementSpeed();
+}
+
+bool AT_PlayerCharacter::HasSpecialMovementState() const
+{
+	if (bIsCrouched) return true;
+
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	return IsValid(ASC) && (
+		ASC->HasMatchingGameplayTag(TTags::State::Action::Grabbing) ||
+		ASC->HasMatchingGameplayTag(TTags::State::Action::Rolling) ||
+		ASC->HasMatchingGameplayTag(TTags::State::Action::Traversing));
+}
+
+void AT_PlayerCharacter::RefreshNormalMovementSpeed()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!IsValid(Movement) || !IsValid(AimingComponent) || HasSpecialMovementState()) return;
+	if (Movement->MovementMode != MOVE_Walking && Movement->MovementMode != MOVE_NavWalking) return;
+
+	const float TargetSpeed = bRunInputHeld ? (bHasPistolGun ? 600.f : 650.f) : 450.f;
+	AimingComponent->SetUnaimedMaxWalkSpeed(TargetSpeed);
+}
+
+void AT_PlayerCharacter::OnRep_HasPistolGun()
+{
+	RefreshNormalMovementSpeed();
+}
+
+bool AT_PlayerCharacter::CanReportFootstepNoise(float HorizontalSpeed) const
+{
+	const UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!IsValid(Movement) || !Movement->IsMovingOnGround() || bIsCrouched || HorizontalSpeed < 80.f) return false;
+
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (IsValid(ASC) && ASC->HasMatchingGameplayTag(TTags::State::Action::Rolling)) return false;
+	if (IsValid(ASC))
+	{
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (Spec.IsActive() && IsValid(Spec.Ability) && Spec.Ability->GetAssetTags().HasTag(TTags::TAbilities::Traversal))
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+void AT_PlayerCharacter::UpdateFootstepNoise(float DeltaSeconds)
+{
+	const float HorizontalSpeed = GetVelocity().Size2D();
+	if (!CanReportFootstepNoise(HorizontalSpeed))
+	{
+		FootstepNoiseElapsed = 0.f;
+		return;
+	}
+
+	const bool bRunning = HorizontalSpeed >= 600.f;
+	const float Interval = bRunning ? 0.3f : 0.55f;
+	FootstepNoiseElapsed += DeltaSeconds;
+	if (FootstepNoiseElapsed < Interval) return;
+	FootstepNoiseElapsed = 0.f;
+
+	UAISense_Hearing::ReportNoiseEvent(
+		this,
+		GetActorLocation(),
+		bRunning ? 1.f : 0.45f,
+		this,
+		bRunning ? 1500.f : 800.f,
+		bRunning ? FName(TEXT("GuardNoise.Footstep.Run")) : FName(TEXT("GuardNoise.Footstep.Walk")));
 }
 
 
@@ -142,21 +258,24 @@ void AT_PlayerCharacter::PossessedBy(AController* NewController)
 	GetAbilitySystemComponent()->InitAbilityActorInfo(GetPlayerState(), this);
 	
 	GiveStartupAbilities();
-	// 换弹能力兜底授予：若蓝图未配置 GA_T_Reload，直接授予原生 UT_Reload，保证 R 键可用
+	// 换弹/投掷能力兜底授予：若蓝图未配置对应能力，直接授予原生类，保证输入可用
 	if (UAbilitySystemComponent* T_ASC = GetAbilitySystemComponent())
 	{
 		bool bReloadGranted = false;
+		bool bThrowGranted = false;
 		for (const FGameplayAbilitySpec& AbilitySpec : T_ASC->GetActivatableAbilities())
 		{
-			if (AbilitySpec.Ability && AbilitySpec.Ability->GetAssetTags().HasTagExact(TTags::TAbilities::Reload))
-			{
-				bReloadGranted = true;
-				break;
-			}
+			if (!AbilitySpec.Ability) continue;
+			if (AbilitySpec.Ability->GetAssetTags().HasTagExact(TTags::TAbilities::Reload)) bReloadGranted = true;
+			if (AbilitySpec.Ability->GetAssetTags().HasTagExact(TTags::TAbilities::Throw)) bThrowGranted = true;
 		}
 		if (!bReloadGranted)
 		{
 			T_ASC->GiveAbility(FGameplayAbilitySpec(UT_Reload::StaticClass()));
+		}
+		if (!bThrowGranted)
+		{
+			T_ASC->GiveAbility(FGameplayAbilitySpec(UT_Throw::StaticClass()));
 		}
 	}
 	InitializeAttributes();
@@ -167,6 +286,13 @@ void AT_PlayerCharacter::PossessedBy(AController* NewController)
 	if (!IsValid(T_AttributeSet)) return;
 	
 	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
+}
+
+void AT_PlayerCharacter::UnPossessed()
+{
+	if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(GetController())) PlayerController->CancelRunAndCatch();
+	else SetRunInputHeld(false);
+	Super::UnPossessed();
 }
 
 void AT_PlayerCharacter::OnRep_PlayerState()
@@ -182,6 +308,13 @@ void AT_PlayerCharacter::OnRep_PlayerState()
 	if (!IsValid(T_AttributeSet)) return;
 	
 	GetAbilitySystemComponent()->GetGameplayAttributeValueChangeDelegate(T_AttributeSet->GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
+}
+
+void AT_PlayerCharacter::HandleDeath()
+{
+	if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(GetController())) PlayerController->CancelRunAndCatch();
+	else SetRunInputHeld(false);
+	Super::HandleDeath();
 }
 
 void AT_PlayerCharacter::SetCameraCollisionEnabled(bool bEnabled)
@@ -270,7 +403,7 @@ bool AT_PlayerCharacter::UseInventoryItem_Implementation(UT_ItemDefinition* Item
 bool AT_PlayerCharacter::CanEquipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition)
 {
 	return IsValid(ItemDefinition) &&
-		ItemDefinition->ItemType == ETItemType::Weapon &&
+		(ItemDefinition->ItemType == ETItemType::Weapon || ItemDefinition->ItemType == ETItemType::Throwable) &&
 		IsValid(ItemDefinition->EquippedActorClass) &&
 		!ItemDefinition->EquipSocketName.IsNone() &&
 		IsValid(GetMesh()) &&
@@ -279,9 +412,20 @@ bool AT_PlayerCharacter::CanEquipInventoryItem_Implementation(UT_ItemDefinition*
 
 bool AT_PlayerCharacter::EquipInventoryItem_Implementation(UT_ItemDefinition* ItemDefinition)
 {
-	if (!CanEquipInventoryItem_Implementation(ItemDefinition) || !IsValid(GetWorld())) return false;
+	if (!CanEquipInventoryItem_Implementation(ItemDefinition) || !IsValid(GetWorld()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipInventoryItem 失败：Item=%s, EquippedActorClass=%s, Socket=%s, SocketExists=%s。"),
+			*GetNameSafe(ItemDefinition),
+			IsValid(ItemDefinition) ? *GetNameSafe(ItemDefinition->EquippedActorClass) : TEXT("None"),
+			IsValid(ItemDefinition) ? *ItemDefinition->EquipSocketName.ToString() : TEXT("None"),
+			IsValid(ItemDefinition) && IsValid(GetMesh()) && GetMesh()->DoesSocketExist(ItemDefinition->EquipSocketName) ? TEXT("true") : TEXT("false"));
+		return false;
+	}
 	bHasPistolGun = false;
-	AimingComponent->SetUnaimedMaxWalkSpeed(650.f);
+	RefreshNormalMovementSpeed();
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (IsValid(ASC)) ASC->RemoveLooseGameplayTag(TTags::State::ThrowableEquipped);
 
 	if (IsValid(EquippedInventoryActor))
 	{
@@ -313,20 +457,62 @@ bool AT_PlayerCharacter::EquipInventoryItem_Implementation(UT_ItemDefinition* It
 		PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
+	if (UProjectileMovementComponent* ProjMovement = EquippedInventoryActor->FindComponentByClass<UProjectileMovementComponent>())
+	{
+		ProjMovement->StopMovementImmediately();
+		ProjMovement->Deactivate();
+	}
+	EquippedInventoryActor->SetLifeSpan(0.f);
+
 	if (!EquippedInventoryActor->AttachToComponent(
 		GetMesh(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		ItemDefinition->EquipSocketName))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipInventoryItem 挂载失败：Item=%s, Socket=%s。"),
+			*GetNameSafe(ItemDefinition), *ItemDefinition->EquipSocketName.ToString());
 		EquippedInventoryActor->Destroy();
 		EquippedInventoryActor = nullptr;
 		return false;
 	}
 
-	EquippedWeaponMesh = EquippedInventoryActor->FindComponentByClass<USkeletalMeshComponent>();
-	bHasPistolGun = true;
-	AimingComponent->SetUnaimedMaxWalkSpeed(550.f);
-	if (IsValid(EquipPistolMontage)) PlayAnimMontage(EquipPistolMontage);
+	// 手持投掷物的根组件是碰撞球，Snap 后需要清掉生成时残留的相对变换，保证贴合 Socket
+	if (USceneComponent* EquippedRoot = EquippedInventoryActor->GetRootComponent())
+	{
+		EquippedRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+
+		// Snap 只对齐根组件（碰撞球），投掷物 BP 的可见网格体相对根还有偏移，需要按网格体几何中心把模型拉回 Socket
+		if (ItemDefinition->ItemType == ETItemType::Throwable)
+		{
+			if (const UStaticMeshComponent* HeldMesh = EquippedInventoryActor->FindComponentByClass<UStaticMeshComponent>())
+			{
+				const FVector GeometryOffset = HeldMesh->Bounds.Origin - GetMesh()->GetSocketLocation(ItemDefinition->EquipSocketName);
+				if (!GeometryOffset.IsNearlyZero()) EquippedRoot->AddWorldOffset(-GeometryOffset);
+			}
+		}
+	}
+
+	if (ItemDefinition->ItemType == ETItemType::Weapon)
+	{
+		EquippedWeaponMesh = EquippedInventoryActor->FindComponentByClass<USkeletalMeshComponent>();
+		if (!IsValid(EquippedWeaponMesh))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("EquipInventoryItem 失败：武器 [%s] 没有 SkeletalMeshComponent。"), *GetNameSafe(EquippedInventoryActor));
+			EquippedInventoryActor->Destroy();
+			EquippedInventoryActor = nullptr;
+			RefreshNormalMovementSpeed();
+			return false;
+		}
+		bHasPistolGun = true;
+		RefreshNormalMovementSpeed();
+		if (IsValid(EquipPistolMontage)) PlayAnimMontage(EquipPistolMontage);
+	}
+	else if (ItemDefinition->ItemType == ETItemType::Throwable)
+	{
+		if (IsValid(ASC)) ASC->AddLooseGameplayTag(TTags::State::ThrowableEquipped);
+		if (IsValid(EquipPistolMontage)) PlayAnimMontage(EquipPistolMontage);
+	}
+
 	return true;
 }
 
@@ -337,7 +523,11 @@ bool AT_PlayerCharacter::UnequipInventoryItem_Implementation(UT_ItemDefinition* 
 	EquippedInventoryActor = nullptr;
 	EquippedWeaponMesh = nullptr;
 	bHasPistolGun = false;
-	AimingComponent->SetUnaimedMaxWalkSpeed(650.f);
+	RefreshNormalMovementSpeed();
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (IsValid(ASC)) ASC->RemoveLooseGameplayTag(TTags::State::ThrowableEquipped);
+
 	return true;
 }
 

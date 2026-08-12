@@ -4,18 +4,52 @@
 #include "AI/BehaviorTree/T_BTTask_GuardMoveTo.h"
 
 #include "AIController.h"
+#include "AI/T_ShooterAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
+#include "Characters/T_GuardCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 
 UT_BTTask_GuardMoveTo::UT_BTTask_GuardMoveTo()
 {
 	NodeName = TEXT("Guard Move To");
+	bCreateNodeInstance = true;
 	INIT_TASK_NODE_NOTIFY_FLAGS();
 }
 
 EBTNodeResult::Type UT_BTTask_GuardMoveTo::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
+	AAIController* AIController = OwnerComp.GetAIOwner();
+	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
+	AT_ShooterAIController* ShooterController = Cast<AT_ShooterAIController>(AIController);
+	AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(IsValid(AIController) ? AIController->GetPawn() : nullptr);
+	if (IsValid(ShooterController) && ShooterController->GetAIState() == ETGuardAIState::Return
+		&& IsValid(Guard) && IsValid(BlackboardComp) && BlackboardComp->IsVectorValueSet(MoveToKeyName))
+	{
+		const FVector ToDestination = BlackboardComp->GetValueAsVector(MoveToKeyName) - Guard->GetActorLocation();
+		if (!ToDestination.IsNearlyZero())
+		{
+			const float YawDelta = FMath::Abs(FMath::FindDeltaAngleDegrees(
+				Guard->GetActorRotation().Yaw,
+				ToDestination.Rotation().Yaw));
+			if (YawDelta > 5.f)
+			{
+				if (UCharacterMovementComponent* Movement = Guard->GetCharacterMovement())
+				{
+					Movement->bOrientRotationToMovement = false;
+					Movement->bUseControllerDesiredRotation = true;
+				}
+				Guard->bUseControllerRotationYaw = false;
+				ShooterController->SetFocalPoint(BlackboardComp->GetValueAsVector(MoveToKeyName), EAIFocusPriority::Gameplay);
+				OwningComponent = &OwnerComp;
+				ElapsedTime = 0.f;
+				bWaitingForReturnFacing = true;
+				return EBTNodeResult::InProgress;
+			}
+		}
+	}
+
 	StartMove(OwnerComp);
 	return EBTNodeResult::InProgress;
 }
@@ -93,6 +127,36 @@ void UT_BTTask_GuardMoveTo::OnMoveFinished(FAIRequestID RequestID, const FPathFo
 void UT_BTTask_GuardMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	ElapsedTime += DeltaSeconds;
+	if (bWaitingForReturnFacing)
+	{
+		AAIController* AIController = OwnerComp.GetAIOwner();
+		UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
+		AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(IsValid(AIController) ? AIController->GetPawn() : nullptr);
+		if (!IsValid(AIController) || !IsValid(Guard) || !IsValid(BlackboardComp)
+			|| !BlackboardComp->IsVectorValueSet(MoveToKeyName))
+		{
+			FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+			return;
+		}
+
+		const FVector ToDestination = BlackboardComp->GetValueAsVector(MoveToKeyName) - Guard->GetActorLocation();
+		const float YawDelta = ToDestination.IsNearlyZero() ? 0.f : FMath::Abs(FMath::FindDeltaAngleDegrees(
+			Guard->GetActorRotation().Yaw,
+			ToDestination.Rotation().Yaw));
+		if (YawDelta <= 5.f)
+		{
+			AIController->ClearFocus(EAIFocusPriority::Gameplay);
+			if (UCharacterMovementComponent* Movement = Guard->GetCharacterMovement())
+			{
+				Movement->bOrientRotationToMovement = true;
+				Movement->bUseControllerDesiredRotation = false;
+			}
+			bWaitingForReturnFacing = false;
+			StartMove(OwnerComp);
+			return;
+		}
+	}
+
 	if (ElapsedTime >= MoveTimeout)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: 移动超时 %.1fs，任务失败。"), *GetName(), MoveTimeout);
@@ -117,6 +181,18 @@ void UT_BTTask_GuardMoveTo::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, ui
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	if (IsValid(AIController))
 	{
+		if (bWaitingForReturnFacing)
+		{
+			AIController->ClearFocus(EAIFocusPriority::Gameplay);
+			if (AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(AIController->GetPawn()))
+			{
+				if (UCharacterMovementComponent* Movement = Guard->GetCharacterMovement())
+				{
+					Movement->bOrientRotationToMovement = true;
+					Movement->bUseControllerDesiredRotation = false;
+				}
+			}
+		}
 		if (UPathFollowingComponent* PathComp = AIController->GetPathFollowingComponent())
 		{
 			PathComp->OnRequestFinished.RemoveAll(this);
@@ -132,6 +208,7 @@ void UT_BTTask_GuardMoveTo::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, ui
 	ObservedKeyID = FBlackboard::InvalidKey;
 	CurrentMoveRequestID = FAIRequestID::InvalidRequest;
 	ElapsedTime = 0.f;
+	bWaitingForReturnFacing = false;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }

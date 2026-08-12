@@ -47,3 +47,6 @@ Thumbs.db
 *.temp
 
 /docs/
+
+# Non-ASCII Content path breaks UnrealBuildTool GitSourceFileWorkingSet (quoted octal escapes)
+Content/GASTestDemo/GameObjects/火花fumo/

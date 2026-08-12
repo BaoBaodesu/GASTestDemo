@@ -25,6 +25,7 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(ComboWindow, "TTags.State.Action.ComboWindow", "连击输入窗口");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Shooting, "TTags.State.Action.Shooting", "角色正在执行射击动作");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Reloading, "TTags.State.Action.Reloading", "角色正在执行换弹动作");
+			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Throwing, "TTags.State.Action.Throwing", "角色正在执行投掷蓄力或出手动作");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Invincible, "TTags.State.Action.Invincible", "角色处于无敌判定窗口，不受伤害且不触发伤害碰撞");
 		}
 
@@ -33,6 +34,8 @@ namespace TTags
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Wall, "TTags.State.Grab.Wall", "角色正在抓握墙体");
 			UE_DEFINE_GAMEPLAY_TAG_COMMENT(Bar, "TTags.State.Grab.Bar", "角色正在抓握横杆");
 		}
+
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(ThrowableEquipped, "TTags.State.ThrowableEquipped", "角色当前装备了可投掷物品");
 	}
 	
 	namespace SetByCaller
@@ -61,6 +64,7 @@ namespace TTags
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Aim, "TTags.TAbilities.Aim", "瞄准能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Shoot, "TTags.TAbilities.Shoot", "射击能力标签");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Reload, "TTags.TAbilities.Reload", "玩家换弹能力标签");
+		UE_DEFINE_GAMEPLAY_TAG_COMMENT(Throw, "TTags.TAbilities.Throw", "玩家投掷能力标签");
 		
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(LockOn, "TTags.TAbilities.LockOn", "锁定敌人能力");
 		UE_DEFINE_GAMEPLAY_TAG_COMMENT(SwitchLockOnTargetLeft, "TTags.TAbilities.SwitchLockOnTargetLeft", "向左切换锁定目标");
@@ -115,6 +119,12 @@ namespace TTags
 			namespace Reload
 			{
 				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Complete, "TTags.Events.Player.Reload.Complete", "换弹动画的实际装填完成事件");
+			}
+
+			namespace Throw
+			{
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(ChargeReady, "TTags.Events.Player.Throw.ChargeReady", "投掷动画蓄力就绪定格事件");
+				UE_DEFINE_GAMEPLAY_TAG_COMMENT(Release, "TTags.Events.Player.Throw.Release", "投掷动画的实际出手事件");
 			}
 		}
 		namespace Enemy

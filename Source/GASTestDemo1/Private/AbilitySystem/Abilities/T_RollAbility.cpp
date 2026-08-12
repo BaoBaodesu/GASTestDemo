@@ -177,4 +177,5 @@ void UT_RollAbility::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	if (AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetAvatarActorFromActorInfo())) PlayerCharacter->RefreshNormalMovementSpeed();
 }

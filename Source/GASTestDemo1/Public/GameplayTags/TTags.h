@@ -28,6 +28,7 @@ namespace TTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(ComboWindow);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shooting);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Reloading);
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Throwing);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Invincible);
 		}
 
@@ -36,6 +37,8 @@ namespace TTags
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Wall);
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Bar);
 		}
+
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(ThrowableEquipped);
 	}
 	
 	namespace SetByCaller
@@ -63,6 +66,7 @@ namespace TTags
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Aim);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shoot);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Reload);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Throw);
 		
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(LockOn);
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(SwitchLockOnTargetLeft);
@@ -116,6 +120,12 @@ namespace TTags
 			namespace Reload
 			{
 				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Complete);
+			}
+
+			namespace Throw
+			{
+				UE_DECLARE_GAMEPLAY_TAG_EXTERN(ChargeReady);
+				UE_DECLARE_GAMEPLAY_TAG_EXTERN(Release);
 			}
 		}
 		namespace Enemy

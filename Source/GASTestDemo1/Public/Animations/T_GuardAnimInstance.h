@@ -5,8 +5,8 @@
 #include "T_GuardAnimInstance.generated.h"
 
 /**
- * Guard 射击敌人动画实例：沿用玩家 AnimInstance 数据，默认始终保持瞄准姿势。
- * 当前 ABP_Shooter 仍继承引擎 AnimInstance；举枪由 AT_GuardCharacter 同步 ABP 的 IsAiming。
+ * Guard 射击敌人动画实例：沿用玩家 AnimInstance 数据，仅在警觉状态保持瞄准姿势。
+ * 巡逻/返回时 bAlwaysAiming=false；Suspicious/Investigate/Combat/Search 时为 true。
  */
 UCLASS()
 class GASTESTDEMO1_API UT_GuardAnimInstance : public UT_PlayerAnimInstance
@@ -16,4 +16,5 @@ class GASTESTDEMO1_API UT_GuardAnimInstance : public UT_PlayerAnimInstance
 public:
 
 	UT_GuardAnimInstance();
+	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 };

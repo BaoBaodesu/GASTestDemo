@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AI/T_ShooterAIController.h"
 #include "BehaviorTree/Decorators/BTDecorator_BlackboardBase.h"
 #include "T_BTDecorator_GuardBlackboard.generated.h"
 
@@ -16,7 +17,11 @@ enum class EGuardBlackboardCondition : uint8
 	// 布尔键为 true
 	IsTrue,
 	// 布尔键为 false
-	IsFalse
+	IsFalse,
+	// Enum 键等于指定状态
+	EnumEquals,
+	// Enum 键不等于指定状态
+	EnumNotEquals
 };
 
 /**
@@ -40,6 +45,9 @@ public:
 	// 条件类型
 	UPROPERTY(EditAnywhere, Category = "Guard|Blackboard")
 	EGuardBlackboardCondition Condition{EGuardBlackboardCondition::IsSet};
+
+	UPROPERTY(EditAnywhere, Category = "Guard|Blackboard", meta = (EditCondition = "Condition == EGuardBlackboardCondition::EnumEquals || Condition == EGuardBlackboardCondition::EnumNotEquals", EditConditionHides))
+	ETGuardAIState EnumValue{ETGuardAIState::Patrol};
 
 protected:
 

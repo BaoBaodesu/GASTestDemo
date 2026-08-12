@@ -210,6 +210,7 @@ void UT_EquipmentCardWidget::UpdateEquipmentDisplay(UT_ItemDefinition* ItemDefin
 			Text->SetText(NameText);
 		}
 	}
+
 	if (bHasEquipment) RefreshAmmoText();
 }
 
@@ -221,6 +222,26 @@ void UT_EquipmentCardWidget::RefreshAmmoFromTimer()
 
 void UT_EquipmentCardWidget::RefreshAmmoText()
 {
+	// 投掷物没有弹匣与备弹，卡片数量取背包内该物品的剩余总数
+	UT_ItemDefinition* EquippedItem = IsValid(Inventory) ? Inventory->GetEquippedItem() : nullptr;
+	if (IsValid(EquippedItem) && EquippedItem->ItemType == ETItemType::Throwable)
+	{
+		const int32 RemainingQuantity = Inventory->GetTotalQuantity(EquippedItem->ItemId);
+		const FText QuantityText = FText::AsNumber(RemainingQuantity);
+		for (UWidget* Widget : FindWidgetsByPrefix(TEXT("ReserveAmount")))
+		{
+			if (UTextBlock* Text = Cast<UTextBlock>(Widget))
+			{
+				Text->SetText(QuantityText);
+			}
+		}
+		for (UWidget* Widget : FindWidgetsByPrefix(TEXT("AmmunitionEmpty")))
+		{
+			Widget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		return;
+	}
+
 	if (!IsValid(AttributeSet)) return;
 
 	const int32 MagazineAmmo = FMath::FloorToInt(AttributeSet->GetMagazineAmmo());

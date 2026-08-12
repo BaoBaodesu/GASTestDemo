@@ -60,4 +60,5 @@ private:
 	FBlackboard::FKey ObservedKeyID;
 	FAIRequestID CurrentMoveRequestID;
 	float ElapsedTime{0.f};
+	bool bWaitingForReturnFacing{false};
 };

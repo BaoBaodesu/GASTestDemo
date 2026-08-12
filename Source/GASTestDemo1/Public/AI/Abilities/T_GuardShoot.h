@@ -34,6 +34,7 @@ public:
 
 	// 判断标签是否属于射击中断标签（死亡/受击/换弹），供测试复用
 	static bool IsInterruptingTag(const FGameplayTag& Tag);
+	static float GetSpreadHalfAngle(float Distance);
 
 protected:
 

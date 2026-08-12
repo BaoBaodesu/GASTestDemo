@@ -9,7 +9,7 @@
 #include "Characters/T_PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameObjects/T_PlayerProjectile.h"
-#include "GameObjects/T_ProjectileShooterComponent.h"
+#include "Player/Components/T_ProjectileShooterComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
 #include "Kismet/GameplayStatics.h"

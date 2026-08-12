@@ -26,5 +26,6 @@ public:
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 	
 private:
+	FGameplayTag ResolveRoutedInputTag(const FGameplayTag& InputTag) const;
 	void HandleAutoActivatedAbility(const FGameplayAbilitySpec& AbilitySpec);
 };

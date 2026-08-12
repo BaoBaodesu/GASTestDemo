@@ -15,6 +15,7 @@
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayTags/TTags.h"
 #include "Player/Components/T_AimingComponent.h"
 #include "Player/Components/T_LockOnComponent.h"
@@ -24,6 +25,27 @@
 #include "UI/Inventory/T_InventoryWidgets.h"
 #include "Blueprint/WidgetTree.h"
 #include "UI/T_AttributeWidget.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Misc/AutomationTest.h"
+#endif
+
+namespace
+{
+	enum class ECatchMovementModeAction : uint8
+	{
+		None,
+		StartCatch,
+		StopCatch
+	};
+
+	ECatchMovementModeAction GetCatchMovementModeAction(EMovementMode MovementMode)
+	{
+		if (MovementMode == MOVE_Falling) return ECatchMovementModeAction::StartCatch;
+		if (MovementMode == MOVE_Walking || MovementMode == MOVE_NavWalking) return ECatchMovementModeAction::StopCatch;
+		return ECatchMovementModeAction::None;
+	}
+}
 
 void AT_PlayerController::SetupInputComponent()
 {
@@ -65,6 +87,8 @@ void AT_PlayerController::SetupInputComponent()
 	
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &ThisClass::StartAim);
 	if (IsValid(ReloadAction)) EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &ThisClass::Reload);
+	EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Completed, this, &ThisClass::StopPrimary);
+	EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Canceled, this, &ThisClass::StopPrimary);
 
 	EnhancedInputComponent->BindAction(LockOnAction, ETriggerEvent::Started, this, &ThisClass::StartLockOn);
 	EnhancedInputComponent->BindAction(SwitchLockOnAction, ETriggerEvent::Started, this, &ThisClass::SwitchLockOnTarget);
@@ -274,6 +298,11 @@ void AT_PlayerController::Reload()
 	ActivateAbility(TTags::TAbilities::Reload);
 }
 
+void AT_PlayerController::StopPrimary()
+{
+	ReleaseAbility(TTags::TAbilities::Primary);
+}
+
 void AT_PlayerController::ActivateAbility(const FGameplayTag& AbilityTag) const
 {
 	if (!IsAlive()) return;
@@ -337,12 +366,38 @@ void AT_PlayerController::ReleaseAbility(const FGameplayTag& AbilityTag) const
 void AT_PlayerController::StartCatch()
 {
 	if (!IsAlive()) return;
-	SendPlayerGameplayEvent(TTags::Events::Player::Grab::Catch);
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetCharacter());
+	if (!IsValid(PlayerCharacter)) return;
+
+	PlayerCharacter->SetRunInputHeld(true);
+	if (PlayerCharacter->GetCharacterMovement()->IsFalling()) SendCatchEvent();
 }
 
 void AT_PlayerController::StopCatch()
 {
+	if (AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetCharacter())) PlayerCharacter->SetRunInputHeld(false);
 	SendPlayerGameplayEvent(TTags::Events::Player::Grab::StopCatch);
+}
+
+void AT_PlayerController::HandleCatchMovementModeChanged(EMovementMode MovementMode)
+{
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetCharacter());
+	if (!IsValid(PlayerCharacter) || !PlayerCharacter->IsRunInputHeld()) return;
+
+	const ECatchMovementModeAction Action = GetCatchMovementModeAction(MovementMode);
+	if (Action == ECatchMovementModeAction::StartCatch) SendCatchEvent();
+	else if (Action == ECatchMovementModeAction::StopCatch) SendPlayerGameplayEvent(TTags::Events::Player::Grab::StopCatch);
+	PlayerCharacter->RefreshNormalMovementSpeed();
+}
+
+void AT_PlayerController::CancelRunAndCatch()
+{
+	StopCatch();
+}
+
+void AT_PlayerController::SendCatchEvent()
+{
+	SendPlayerGameplayEvent(TTags::Events::Player::Grab::Catch);
 }
 
 void AT_PlayerController::ReleaseGrab()
@@ -469,3 +524,20 @@ void AT_PlayerController::OnHUDWidgetAttributeChanged(const FOnAttributeChangeDa
 
 	AttrWidget->OnAttributeChange(TTuple<FGameplayAttribute, FGameplayAttribute>(Attribute, MaxAttribute), AttributeSet, ChangeData.OldValue);
 }
+
+#if WITH_DEV_AUTOMATION_TESTS
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FTCatchMovementModeActionTest,
+	"GASTestDemo1.Grab.CatchMovementModeAction",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTCatchMovementModeActionTest::RunTest(const FString& Parameters)
+{
+	TestTrue(TEXT("进入 Falling 时开始 Catch 检测"), GetCatchMovementModeAction(MOVE_Falling) == ECatchMovementModeAction::StartCatch);
+	TestTrue(TEXT("落地 Walking 时停止 Catch 检测"), GetCatchMovementModeAction(MOVE_Walking) == ECatchMovementModeAction::StopCatch);
+	TestTrue(TEXT("落地 NavWalking 时停止 Catch 检测"), GetCatchMovementModeAction(MOVE_NavWalking) == ECatchMovementModeAction::StopCatch);
+	TestTrue(TEXT("抓取过渡 Flying 时保持 Catch 状态"), GetCatchMovementModeAction(MOVE_Flying) == ECatchMovementModeAction::None);
+	TestTrue(TEXT("其他自定义移动模式不干预 Catch"), GetCatchMovementModeAction(MOVE_Custom) == ECatchMovementModeAction::None);
+	return true;
+}
+#endif

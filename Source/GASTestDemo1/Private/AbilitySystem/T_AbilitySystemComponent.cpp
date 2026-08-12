@@ -64,11 +64,18 @@ void UT_AbilitySystemComponent::HandleAutoActivatedAbility(const FGameplayAbilit
 	}
 }
 
+FGameplayTag UT_AbilitySystemComponent::ResolveRoutedInputTag(const FGameplayTag& InputTag) const
+{
+	if (!InputTag.MatchesTagExact(TTags::TAbilities::Primary)) return InputTag;
+	if (HasMatchingGameplayTag(TTags::State::Action::Throwing)) return TTags::TAbilities::Throw;
+	if (!HasMatchingGameplayTag(TTags::State::Aiming)) return InputTag;
+	return HasMatchingGameplayTag(TTags::State::ThrowableEquipped) ? TTags::TAbilities::Throw : TTags::TAbilities::Shoot;
+}
+
 void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
-	FGameplayTag RoutedInputTag = InputTag;
-	if (InputTag.MatchesTagExact(TTags::TAbilities::Primary) && HasMatchingGameplayTag(TTags::State::Aiming)) RoutedInputTag = TTags::TAbilities::Shoot;
+	const FGameplayTag RoutedInputTag = ResolveRoutedInputTag(InputTag);
 
 	if (RoutedInputTag.MatchesTagExact(TTags::TAbilities::Shoot) || RoutedInputTag.MatchesTagExact(TTags::TAbilities::Reload))
 	{
@@ -113,11 +120,12 @@ void UT_AbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 void UT_AbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
+	const FGameplayTag RoutedInputTag = ResolveRoutedInputTag(InputTag);
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (!AbilitySpec.Ability) continue;
-		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(InputTag)) continue;
+		if (!AbilitySpec.Ability->GetAssetTags().HasTagExact(RoutedInputTag)) continue;
 		AbilitySpec.InputPressed = false;
 		if (AbilitySpec.IsActive())
 		{

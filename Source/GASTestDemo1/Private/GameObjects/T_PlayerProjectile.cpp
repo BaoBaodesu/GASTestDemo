@@ -16,6 +16,8 @@
 #include "Net/UnrealNetwork.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Perception/AISense_Damage.h"
+#include "Perception/AISense_Hearing.h"
 
 AT_PlayerProjectile::AT_PlayerProjectile()
 {
@@ -30,6 +32,7 @@ AT_PlayerProjectile::AT_PlayerProjectile()
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CollisionComponent->SetCollisionObjectType(ECC_WorldDynamic);
 	CollisionComponent->SetCollisionResponseToAllChannels(ECR_Block);
+	CollisionComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Overlap);
 	CollisionComponent->SetNotifyRigidBodyCollision(true);
 	CollisionComponent->OnComponentHit.AddDynamic(this, &ThisClass::OnProjectileHit);
 
@@ -117,6 +120,17 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	ProjectileMovement->StopMovementImmediately();
 	MulticastPlayImpactEffects(Hit.ImpactPoint, Hit.ImpactNormal);
+	AActor* NoiseInstigator = GetInstigator() ? GetInstigator() : GetOwner();
+	if (IsValid(NoiseInstigator) && NoiseInstigator->IsA<AT_PlayerCharacter>())
+	{
+		UAISense_Hearing::ReportNoiseEvent(
+			this,
+			Hit.ImpactPoint,
+			0.5f,
+			NoiseInstigator,
+			800.f,
+			TEXT("GuardNoise.BulletImpact"));
+	}
 
 	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor);
@@ -172,6 +186,16 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 
 	if (bHitConfirmed && OtherActor->IsA<APawn>())
 	{
+		if (AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(OtherActor))
+		{
+			UAISense_Damage::ReportDamageEvent(
+				this,
+				Guard,
+				GetInstigator() ? GetInstigator() : GetOwner(),
+				DamageMagnitude,
+				Hit.ImpactPoint,
+				Hit.ImpactPoint);
+		}
 		if (AT_PlayerCharacter* Shooter = Cast<AT_PlayerCharacter>(GetOwner()))
 		{
 			Shooter->ClientNotifyHitConfirmed();

@@ -37,6 +37,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	void CloseInventory();
+
+	void HandleCatchMovementModeChanged(EMovementMode MovementMode);
+	void CancelRunAndCatch();
 	
 protected:
 	virtual void BeginPlay() override;
@@ -74,7 +77,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	TObjectPtr<UInputAction> ReloadAction;
-	
+
 	UPROPERTY(EditDefaultsOnly, Category = "Crash|Input|Abilities")
 	UInputAction* LockOnAction;
 
@@ -116,6 +119,7 @@ private:
 	void StartAim();
 	void StopAim();
 	void Reload();
+	void StopPrimary();
 	void PickUp();
 	void ActivateQuickSlot(FKey Key);
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
@@ -125,6 +129,7 @@ private:
 	void SwitchLockOnTarget(const FInputActionValue& Value);
 	void StartCatch();
 	void StopCatch();
+	void SendCatchEvent();
 	void ReleaseGrab();
 	void SendPlayerGameplayEvent(const FGameplayTag& EventTag, float EventMagnitude = 0.0f) const;
 

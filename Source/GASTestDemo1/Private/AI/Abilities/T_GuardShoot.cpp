@@ -13,7 +13,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "GameObjects/T_PlayerProjectile.h"
-#include "GameObjects/T_ProjectileShooterComponent.h"
+#include "Player/Components/T_ProjectileShooterComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
 #include "UObject/ConstructorHelpers.h"
@@ -54,6 +54,13 @@ bool UT_GuardShoot::IsInterruptingTag(const FGameplayTag& Tag)
 	return Tag == TTags::State::Action::Reloading
 		|| Tag == TTags::State::Action::HitReact
 		|| Tag == GetGuardShootDeadTag();
+}
+
+float UT_GuardShoot::GetSpreadHalfAngle(float Distance)
+{
+	if (Distance <= 800.f) return 1.f;
+	if (Distance <= 1600.f) return 2.f;
+	return 3.5f;
 }
 
 void UT_GuardShoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -134,7 +141,9 @@ bool UT_GuardShoot::ExecuteShot(AActor* Target)
 	{
 		AimPoint.Z = TargetLocation.Z + AimHeightOffset;
 	}
-	AT_PlayerProjectile* Projectile = Shooter->FireProjectile(AimPoint, ProjectileClass, DamageEffectClass, Damage, Guard);
+	const float TargetDistance = FVector::Dist(Shooter->GetComponentLocation(), AimPoint);
+	AT_PlayerProjectile* Projectile = Shooter->FireProjectile(
+		AimPoint, ProjectileClass, DamageEffectClass, Damage, Guard, false, GetSpreadHalfAngle(TargetDistance));
 	if (!IsValid(Projectile))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: ExecuteShot 投射物生成失败，跳过扣弹。"), *GetName());

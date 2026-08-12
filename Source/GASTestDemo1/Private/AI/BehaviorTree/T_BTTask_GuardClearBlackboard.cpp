@@ -16,7 +16,7 @@ EBTNodeResult::Type UT_BTTask_GuardClearBlackboard::ExecuteTask(UBehaviorTreeCom
 	AT_ShooterAIController* ShooterController = Cast<AT_ShooterAIController>(OwnerComp.GetAIOwner());
 	if (IsValid(ShooterController))
 	{
-		ShooterController->ClearTargetState();
+		ShooterController->CompleteCurrentBehaviorState();
 	}
 	else
 	{

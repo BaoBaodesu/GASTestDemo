@@ -7,7 +7,7 @@
 #include "T_BTTask_GuardClearBlackboard.generated.h"
 
 /**
- * Guard 清理黑板 Task：清除目标状态与 Enemy/Enemy Spotted/Move Location/Noise Location 键。
+ * Guard 状态完成 Task：按当前状态清理临时键并推进状态，永远保留 Home Location。
  */
 UCLASS()
 class GASTESTDEMO1_API UT_BTTask_GuardClearBlackboard : public UBTTaskNode

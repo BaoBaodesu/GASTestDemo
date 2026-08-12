@@ -140,6 +140,10 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Inventory|Quick Slots")
 	TArray<TObjectPtr<UT_ItemDefinition>> QuickSlots;
 
+public:
+	UFUNCTION(BlueprintPure, Category="Inventory")
+	int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
+
 private:
 	int32 FindEmptySlot() const;
 	AT_PickUpItems* SpawnDroppedItem(UT_ItemDefinition* ItemDefinition, int32 Quantity) const;

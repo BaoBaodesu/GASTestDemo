@@ -6,6 +6,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Enum.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 
@@ -25,6 +26,11 @@ bool UT_BTDecorator_GuardBlackboard::CalculateRawConditionValue(UBehaviorTreeCom
 	if (!BlackboardComp->IsValidKey(KeyID)) return false;
 
 	const UClass* KeyType = BlackboardComp->GetKeyType(KeyID);
+	if (KeyType && KeyType->IsChildOf(UBlackboardKeyType_Enum::StaticClass()))
+	{
+		const bool bEqual = BlackboardComp->GetValueAsEnum(KeyName) == static_cast<uint8>(EnumValue);
+		return Condition == EGuardBlackboardCondition::EnumNotEquals ? !bEqual : bEqual;
+	}
 	bool bValue = false;
 	if (KeyType && KeyType->IsChildOf(UBlackboardKeyType_Bool::StaticClass()))
 	{

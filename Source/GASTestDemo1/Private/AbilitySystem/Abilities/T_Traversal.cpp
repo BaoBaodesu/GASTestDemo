@@ -392,4 +392,5 @@ void UT_Traversal::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	if (IsValid(PlayerCharacter)) PlayerCharacter->RefreshNormalMovementSpeed();
 }

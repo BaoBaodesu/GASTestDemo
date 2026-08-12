@@ -21,7 +21,13 @@ public:
 
 	AT_PlayerProjectile* FireProjectile(const FVector& AimPoint,
 		TSubclassOf<AT_PlayerProjectile> ProjectileClass,
-		TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor, bool bHeadshot = false);
+		TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor,
+		bool bHeadshot = false, float SpreadHalfAngleDegrees = 0.f);
+
+	static FVector ApplySpreadToDirection(const FVector& Direction, float SpreadHalfAngleDegrees);
+
+protected:
+	virtual void BeginPlay() override;
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category="Projectile Shooter|FX")

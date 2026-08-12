@@ -1,12 +1,15 @@
-#include "GameObjects/T_ProjectileShooterComponent.h"
+#include "Player/Components/T_ProjectileShooterComponent.h"
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Characters/T_PlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "GameObjects/T_PlayerProjectile.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Perception/AISense_Hearing.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
@@ -35,9 +38,25 @@ UT_ProjectileShooterComponent::UT_ProjectileShooterComponent()
 	WeaponFireMontage = WeaponFireMontageAsset.Object;
 }
 
+void UT_ProjectileShooterComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	if (GetNetMode() == NM_DedicatedServer) return;
+
+	if (IsValid(FireSound)) UGameplayStatics::PrimeSound(FireSound);
+	if (IsValid(ImpactSound)) UGameplayStatics::PrimeSound(ImpactSound);
+
+	UNiagaraSystem* SystemsToPrecache[] = {MuzzleSystem, TrailSystem, ImpactSystem, ShellEjectionSystem};
+	for (UNiagaraSystem* System : SystemsToPrecache)
+	{
+		if (IsValid(System)) System->PrecachePSOs();
+	}
+}
+
 AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector& AimPoint,
 	TSubclassOf<AT_PlayerProjectile> ProjectileClass,
-	TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor, bool bHeadshot)
+	TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor,
+	bool bHeadshot, float SpreadHalfAngleDegrees)
 {
 	UWorld* World = GetWorld();
 	if (!IsValid(World) || !IsValid(SourceActor) || !SourceActor->HasAuthority() || !IsValid(ProjectileClass)) return nullptr;
@@ -50,7 +69,7 @@ AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector
 	}
 
 	const FVector MuzzleLocation = WeaponMesh->GetSocketLocation(MuzzleSocketName);
-	const FVector AimDirection = (AimPoint - MuzzleLocation).GetSafeNormal();
+	const FVector AimDirection = ApplySpreadToDirection((AimPoint - MuzzleLocation).GetSafeNormal(), SpreadHalfAngleDegrees);
 	if (AimDirection.IsNearlyZero()) return nullptr;
 	if (IsValid(WeaponFireMontage) && IsValid(WeaponMesh->GetAnimInstance())) WeaponMesh->GetAnimInstance()->Montage_Play(WeaponFireMontage);
 
@@ -67,5 +86,22 @@ AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector
 	if (!IsValid(Projectile)) return nullptr;
 	Projectile->InitializeProjectile(DamageEffectClass, Damage, bHeadshot, TrailSystem, ImpactSystem, ImpactSound, ImpactSoundAttenuation, GetOwner());
 	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
+	if (SourceActor->IsA<AT_PlayerCharacter>())
+	{
+		UAISense_Hearing::ReportNoiseEvent(
+			this,
+			MuzzleLocation,
+			1.f,
+			SourceActor,
+			1800.f,
+			TEXT("GuardNoise.Gunshot"));
+	}
 	return Projectile;
+}
+
+FVector UT_ProjectileShooterComponent::ApplySpreadToDirection(const FVector& Direction, float SpreadHalfAngleDegrees)
+{
+	const FVector NormalizedDirection = Direction.GetSafeNormal();
+	if (NormalizedDirection.IsNearlyZero() || SpreadHalfAngleDegrees <= 0.f) return NormalizedDirection;
+	return FMath::VRandCone(NormalizedDirection, FMath::DegreesToRadians(SpreadHalfAngleDegrees));
 }

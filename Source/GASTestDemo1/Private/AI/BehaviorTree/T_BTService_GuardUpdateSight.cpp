@@ -19,25 +19,14 @@ void UT_BTService_GuardUpdateSight::TickNode(UBehaviorTreeComponent& OwnerComp, 
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-	AAIController* AIController = OwnerComp.GetAIOwner();
-	AT_ShooterAIController* ShooterController = Cast<AT_ShooterAIController>(AIController);
+	AT_ShooterAIController* ShooterController = Cast<AT_ShooterAIController>(OwnerComp.GetAIOwner());
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
 	if (!IsValid(ShooterController) || !IsValid(BlackboardComp)) return;
 
 	AActor* Target = ShooterController->GetCurrentTarget();
-	if (!IsValid(Target) || !IsValid(AIController))
-	{
-		BlackboardComp->SetValueAsBool(GuardBBKeys::EnemySpotted, false);
-		return;
-	}
-
-	if (AIController->LineOfSightTo(Target, FVector::ZeroVector, true))
+	if (IsValid(Target))
 	{
 		BlackboardComp->SetValueAsObject(GuardBBKeys::Enemy, Target);
-		BlackboardComp->SetValueAsBool(GuardBBKeys::EnemySpotted, true);
-		BlackboardComp->SetValueAsVector(GuardBBKeys::MoveLocation, Target->GetActorLocation());
+		if (ShooterController->HasVisualContact()) ShooterController->SyncLastKnownLocation();
 	}
-	// 视线被短暂遮挡时不立即清除 Enemy Spotted：
-	// 由感知系统的"丢失目标"刺激（HandleTargetPerceptionUpdated 失败分支）负责清除，
-	// 避免单次 trace 误判导致 Combat 分支被反复中断。
 }

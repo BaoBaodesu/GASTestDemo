@@ -7,7 +7,7 @@
 #include "T_BTService_GuardUpdateSight.generated.h"
 
 /**
- * Guard 视线更新 Service：战斗中刷新敌人/已发现/移动位置黑板键。
+ * Guard 视线更新 Service：只同步控制器已经确认的目标与最后已知位置，不计算警觉度。
  */
 UCLASS()
 class GASTESTDEMO1_API UT_BTService_GuardUpdateSight : public UBTService

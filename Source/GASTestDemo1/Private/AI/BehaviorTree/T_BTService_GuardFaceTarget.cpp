@@ -5,6 +5,7 @@
 
 #include "AI/T_ShooterAIController.h"
 #include "AIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 
 UT_BTService_GuardFaceTarget::UT_BTService_GuardFaceTarget()
@@ -23,12 +24,24 @@ void UT_BTService_GuardFaceTarget::TickNode(UBehaviorTreeComponent& OwnerComp, u
 	if (!IsValid(ShooterController)) return;
 
 	AActor* Target = ShooterController->GetCurrentTarget();
-	if (IsValid(Target))
+	if (IsValid(Target) && ShooterController->HasVisualContact())
 	{
 		AIController->SetFocus(Target, EAIFocusPriority::Gameplay);
 	}
 	else
 	{
-		AIController->ClearFocus(EAIFocusPriority::Gameplay);
+		UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
+		if (IsValid(BlackboardComp) && BlackboardComp->IsVectorValueSet(GuardBBKeys::LastKnownLocation))
+		{
+			AIController->SetFocalPoint(BlackboardComp->GetValueAsVector(GuardBBKeys::LastKnownLocation), EAIFocusPriority::Gameplay);
+		}
+		else if (IsValid(BlackboardComp) && BlackboardComp->IsVectorValueSet(GuardBBKeys::InvestigateLocation))
+		{
+			AIController->SetFocalPoint(BlackboardComp->GetValueAsVector(GuardBBKeys::InvestigateLocation), EAIFocusPriority::Gameplay);
+		}
+		else
+		{
+			AIController->ClearFocus(EAIFocusPriority::Gameplay);
+		}
 	}
 }

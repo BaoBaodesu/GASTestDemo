@@ -7,7 +7,7 @@
 #include "T_BTService_GuardPatrol.generated.h"
 
 /**
- * Guard 巡逻点 Service：在导航范围内随机挑选可达点写入 Move Location。
+ * Guard 巡逻点 Service：按角色 PatrolMode 写入 Move Location（站岗/往返/绕圈）。
  */
 UCLASS()
 class GASTESTDEMO1_API UT_BTService_GuardPatrol : public UBTService
@@ -17,10 +17,6 @@ class GASTESTDEMO1_API UT_BTService_GuardPatrol : public UBTService
 public:
 
 	UT_BTService_GuardPatrol();
-
-	// 以当前位置为中心的可达巡逻半径
-	UPROPERTY(EditAnywhere, Category = "Guard|Patrol")
-	float PatrolRadius{800.f};
 
 	// 巡逻点写入的黑板键
 	UPROPERTY(EditAnywhere, Category = "Guard|Patrol")
