@@ -153,7 +153,7 @@ void UT_GrabComponent::BeginTransition()
 	GrabState = ET_GrabState::Transitioning;
 	CharacterMovement->StopMovementImmediately();
 	CharacterMovement->GravityScale = 0.0f;
-	CharacterMovement->MaxFlySpeed = 70.0f;
+	CharacterMovement->MaxFlySpeed = 120.0f;
 	CharacterMovement->bOrientRotationToMovement = false;
 	CharacterMovement->bUseControllerDesiredRotation = false;
 	CharacterMovement->SetPlaneConstraintNormal(FVector::UpVector);
