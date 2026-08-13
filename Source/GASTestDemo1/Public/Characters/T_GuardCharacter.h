@@ -68,6 +68,8 @@ public:
 	// 将警觉状态同步到 AnimInstance 的 bAlwaysAiming / IsAiming（巡逻放下枪，警觉后举枪）
 	void SyncAnimIsAiming();
 
+	UAnimMontage* GetPrimedAimPoseMontage() const { return PrimedAimPoseMontage; }
+
 	// 非致命受击表现：播放受击蒙太奇并短暂挂上 HitReact 标签以打断射击
 	void PlayHitReactPresentation(AActor* InstigatorActor = nullptr);
 
@@ -191,6 +193,8 @@ private:
 	void InitializeAwarenessWidget();
 	void RefreshAwarenessWidget();
 	void HandleAIStateChanged(ETGuardAIState PreviousState);
+	void PrimeCombatPresentation();
+	void ApplyWeaponVisibility(bool bShowWeapon);
 
 	UFUNCTION()
 	void OnRep_GuardAwareness();
@@ -259,6 +263,9 @@ private:
 	UPROPERTY(Transient)
 	TArray<FVector> CachedPatrolWorldPoints;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimMontage> PrimedAimPoseMontage;
+
 	int32 PatrolPointIndex{0};
 	int32 PatrolDirection{1};
 	bool bPatrolRouteInitialized{false};
@@ -272,6 +279,11 @@ private:
 
 	bool bDeathStarted{false};
 	bool bDeathDestroyed{false};
+	bool bLastShouldAim{false};
+	bool bWeaponVisibilityApplied{false};
+	bool bWeaponVisible{false};
+	bool bAimPosePrimeAttempted{false};
+	int32 CombatPresentationPrimeFrames{0};
 	bool bCombatStrafeEnabled{false};
 	bool bReturnMovementEnabled{false};
 	bool bSavedOrientRotationToMovement{true};

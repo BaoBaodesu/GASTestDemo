@@ -9,6 +9,7 @@
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Framework/Application/SlateApplication.h"
 #include "InputAction.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/PanelWidget.h"
@@ -25,6 +26,27 @@
 #include "UI/Inventory/T_InventoryWidgets.h"
 #include "Blueprint/WidgetTree.h"
 #include "UI/T_AttributeWidget.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Quest/T_QuestGameState.h"
+#include "TimerManager.h"
+#include "UI/Quest/T_GameMenuWidget.h"
+#include "UI/Quest/T_LastChanceWidget.h"
+#include "UI/Quest/T_QuestWidget.h"
+
+namespace
+{
+	void RestoreGameplayMouseLook(APlayerController* PlayerController)
+	{
+		if (!IsValid(PlayerController) || !PlayerController->IsLocalController()) return;
+		PlayerController->bShowMouseCursor = false;
+		PlayerController->SetIgnoreLookInput(false);
+		FInputModeGameOnly InputMode;
+		InputMode.SetConsumeCaptureMouseDown(true);
+		PlayerController->SetInputMode(InputMode);
+		if (FSlateApplication::IsInitialized()) FSlateApplication::Get().SetAllUserFocusToGameViewport();
+	}
+}
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
@@ -61,6 +83,10 @@ void AT_PlayerController::SetupInputComponent()
 	if (!IsValid(ReloadAction))
 	{
 		ReloadAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Reload.IA_Reload"));
+	}
+	if (!IsValid(QuestAction))
+	{
+		QuestAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/GASTestDemo/Input/AbilitiesActions/IA_Quest.IA_Quest"));
 	}
 	
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
@@ -102,6 +128,9 @@ void AT_PlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(PickUpAction, ETriggerEvent::Started, this, &ThisClass::PickUp);
 	
 	if (IsValid(InventoryAction)) EnhancedInputComponent->BindAction(InventoryAction, ETriggerEvent::Started, this, &ThisClass::ToggleInventory);
+	if (IsValid(QuestAction)) EnhancedInputComponent->BindAction(QuestAction, ETriggerEvent::Started, this, &ThisClass::ToggleQuestUI);
+	FInputKeyBinding& EscapeBinding = InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ThisClass::ToggleGameMenu);
+	EscapeBinding.bExecuteWhenPaused = true;
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
 	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ThisClass::ActivateQuickSlot);
@@ -117,12 +146,147 @@ void AT_PlayerController::BeginPlay()
 	{
 		PlayerHUDWidgetClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/GASTestDemo/UI/WBP_PlayerHUD.WBP_PlayerHUD_C"));
 	}
-	if (!IsValid(PlayerHUDWidgetClass)) return;
-
-	PlayerHUDWidget = CreateWidget<UUserWidget>(this, PlayerHUDWidgetClass);
-	if (IsValid(PlayerHUDWidget)) PlayerHUDWidget->AddToViewport();
+	if (IsValid(PlayerHUDWidgetClass))
+	{
+		PlayerHUDWidget = CreateWidget<UUserWidget>(this, PlayerHUDWidgetClass);
+		if (IsValid(PlayerHUDWidget)) PlayerHUDWidget->AddToViewport();
+	}
+	if (!IsValid(QuestWidgetClass)) QuestWidgetClass = LoadClass<UT_QuestWidget>(nullptr, TEXT("/Game/GASTestDemo/UI/WBP_QuestUI.WBP_QuestUI_C"));
+	if (!IsValid(GameMenuWidgetClass)) GameMenuWidgetClass = LoadClass<UT_GameMenuWidget>(nullptr, TEXT("/Game/GASTestDemo/UI/WBP_GameMenu.WBP_GameMenu_C"));
 
 	BindPlayerStatusWidgets();
+	BindQuestState();
+	RestoreGameplayMouseLook(this);
+}
+
+void AT_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearTimer(LastChanceTimerHandle);
+	if (IsValid(BoundQuestGameState)) BoundQuestGameState->OnQuestStateChanged.RemoveDynamic(this, &ThisClass::HandleQuestStateChanged);
+	Super::EndPlay(EndPlayReason);
+}
+
+void AT_PlayerController::ToggleQuestUI()
+{
+	if (IsValid(GameMenuWidget) && GameMenuWidget->IsVisible()) return;
+	AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr;
+	if (!IsValid(QuestGameState) || QuestGameState->GetQuestOutcome() != EQuestOutcome::InProgress || !IsValid(QuestWidgetClass)) return;
+
+	if (!IsValid(QuestWidget))
+	{
+		QuestWidget = CreateWidget<UT_QuestWidget>(this, QuestWidgetClass);
+		if (!IsValid(QuestWidget)) return;
+		QuestWidget->AddToViewport(20);
+		QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	QuestWidget->InitializeQuest(Cast<AT_PlayerCharacter>(GetPawn()));
+	QuestWidget->SetVisibility(QuestWidget->GetVisibility() == ESlateVisibility::Visible
+		? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+}
+
+void AT_PlayerController::ToggleGameMenu()
+{
+	AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr;
+	if (IsValid(QuestGameState) && QuestGameState->GetQuestOutcome() != EQuestOutcome::InProgress) return;
+	if (IsValid(GameMenuWidget) && GameMenuWidget->IsVisible()) CloseGameMenu();
+	else OpenGameMenu(static_cast<uint8>(ETGameMenuMode::Pause));
+}
+
+void AT_PlayerController::OpenGameMenu(uint8 MenuMode)
+{
+	if (!IsLocalController() || !IsValid(GameMenuWidgetClass)) return;
+	if (IsValid(InventoryWidget)) CloseInventory();
+	if (IsValid(QuestWidget)) QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
+
+	if (!IsValid(GameMenuWidget))
+	{
+		GameMenuWidget = CreateWidget<UT_GameMenuWidget>(this, GameMenuWidgetClass);
+		if (!IsValid(GameMenuWidget)) return;
+		GameMenuWidget->AddToViewport(50);
+	}
+	GameMenuWidget->SetMenuMode(static_cast<ETGameMenuMode>(MenuMode), GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr);
+	GameMenuWidget->SetVisibility(ESlateVisibility::Visible);
+	bShowMouseCursor = true;
+	FInputModeGameAndUI InputMode;
+	InputMode.SetWidgetToFocus(GameMenuWidget->TakeWidget());
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	SetPause(true);
+}
+
+void AT_PlayerController::CloseGameMenu()
+{
+	if (!IsValid(GameMenuWidget) || GameMenuWidget->GetMenuMode() != ETGameMenuMode::Pause) return;
+	GameMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+	SetPause(false);
+}
+
+void AT_PlayerController::HandleGameMenuContinue()
+{
+	if (!IsValid(GameMenuWidget)) return;
+	if (GameMenuWidget->GetMenuMode() == ETGameMenuMode::Victory) GameMenuWidget->SetNoMoreLevelsMessage();
+	else if (GameMenuWidget->GetMenuMode() == ETGameMenuMode::Pause) CloseGameMenu();
+}
+
+void AT_PlayerController::RestartQuestLevel()
+{
+	RestoreGameplayMouseLook(this);
+	SetPause(false);
+	if (IsValid(GameMenuWidget))
+	{
+		GameMenuWidget->RemoveFromParent();
+		GameMenuWidget = nullptr;
+	}
+	const FString LevelName = UGameplayStatics::GetCurrentLevelName(this, true);
+	UGameplayStatics::OpenLevel(this, FName(*LevelName));
+}
+
+void AT_PlayerController::QuitQuestGame()
+{
+	UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+}
+
+void AT_PlayerController::BindQuestState()
+{
+	if (IsValid(BoundQuestGameState)) BoundQuestGameState->OnQuestStateChanged.RemoveDynamic(this, &ThisClass::HandleQuestStateChanged);
+	BoundQuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr;
+	if (!IsValid(BoundQuestGameState)) return;
+	BoundQuestGameState->OnQuestStateChanged.AddUniqueDynamic(this, &ThisClass::HandleQuestStateChanged);
+	HandleQuestStateChanged();
+}
+
+void AT_PlayerController::HandleQuestStateChanged()
+{
+	if (!IsLocalController() || !IsValid(BoundQuestGameState)) return;
+	if (BoundQuestGameState->GetQuestOutcome() == EQuestOutcome::Victory)
+	{
+		if (IsValid(QuestWidget)) QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
+		OpenGameMenu(static_cast<uint8>(ETGameMenuMode::Victory));
+	}
+	else if (BoundQuestGameState->GetQuestOutcome() == EQuestOutcome::Failure)
+	{
+		if (IsValid(QuestWidget)) QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
+		OpenGameMenu(static_cast<uint8>(ETGameMenuMode::Failure));
+	}
+}
+
+void AT_PlayerController::ClientShowLastChance_Implementation()
+{
+	if (!IsValid(LastChanceWidget))
+	{
+		LastChanceWidget = CreateWidget<UT_LastChanceWidget>(this, UT_LastChanceWidget::StaticClass());
+		if (IsValid(LastChanceWidget)) LastChanceWidget->AddToViewport(40);
+	}
+	if (IsValid(LastChanceWidget)) LastChanceWidget->SetVisibility(ESlateVisibility::Visible);
+	GetWorldTimerManager().ClearTimer(LastChanceTimerHandle);
+	GetWorldTimerManager().SetTimer(LastChanceTimerHandle, this, &ThisClass::HideLastChance, 3.f, false);
+}
+
+void AT_PlayerController::HideLastChance()
+{
+	if (IsValid(LastChanceWidget)) LastChanceWidget->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void AT_PlayerController::ToggleInventory()
@@ -133,6 +297,7 @@ void AT_PlayerController::ToggleInventory()
 
 void AT_PlayerController::OpenInventory(UT_InventoryComponent* StorageInventory)
 {
+	if (IsValid(GameMenuWidget) && GameMenuWidget->IsVisible()) return;
 	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(GetPawn());
 	if (!IsValid(PlayerCharacter) || !IsValid(PlayerCharacter->GetInventoryComponent()) || !IsValid(InventoryWidgetClass)) return;
 
@@ -422,6 +587,7 @@ void AT_PlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	BindPlayerStatusWidgets();
+	RestoreGameplayMouseLook(this);
 }
 
 void AT_PlayerController::BindPlayerStatusWidgets()

@@ -7,7 +7,6 @@
 #include "Camera/CameraComponent.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_EnemyCharacter.h"
-#include "DrawDebugHelpers.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -61,11 +60,6 @@ void UT_LockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UT_LockOnComponent::ToggleLockOn()
 {
-	if (OwnerCharacter)
-	{
-		DrawDebugSphere(GetWorld(), OwnerCharacter->GetActorLocation(), LockOnRadius, 32, FColor::Green, false, 2.0f, 0, 2.0f);
-	}
-
 	if (IsValid(CurrentTargetActor))
 	{
 		StopLockOn();

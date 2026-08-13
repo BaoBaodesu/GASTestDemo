@@ -7,6 +7,7 @@
 #include "T_GuardAim.generated.h"
 
 class AT_ShooterAIController;
+class UAnimInstance;
 class UAnimMontage;
 class UAnimSequence;
 
@@ -28,6 +29,9 @@ public:
 
 	// 射击蒙太奇打断后，若仍在瞄准则重新播放 ADS 姿势
 	void RestartAimPose();
+
+	// 在 BeginPlay 预创建动态 ADS Montage，避免首次进入 Combat 时卡顿
+	static UAnimMontage* PrimeAimPose(UAnimInstance* AnimInstance);
 
 protected:
 

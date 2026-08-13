@@ -9,6 +9,7 @@
 #include "ContextualAnimSceneActorComponent.h"
 #include "Engine/World.h"
 #include "GameplayTags/TTags.h"
+#include "Quest/T_QuestGameState.h"
 #include "MotionWarpingComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -81,6 +82,10 @@ void AT_EnemyCharacter::BeginPlay()
 	GetAbilitySystemComponent()->InitAbilityActorInfo(this, this);
 
 	if (!HasAuthority()) return;
+	if (AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr)
+	{
+		QuestGameState->RegisterEnemy(this);
+	}
 	
 	GiveStartupAbilities();
 	InitializeAttributes();

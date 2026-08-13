@@ -12,8 +12,10 @@
 #include "Player/Components/T_ProjectileShooterComponent.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
+#include "Inventory/T_InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/Components/T_AimingComponent.h"
+#include "Quest/T_QuestGameState.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -118,11 +120,16 @@ void UT_Shoot::ExecuteShot()
 
 	// 命中敌人且瞄准点在敌人头部骨骼附近时按头部伤害倍率结算
 	const bool bHeadshot = IsEnemyHeadHit(CameraHit, HeadBoneName, HeadshotToleranceRadius);
-	AT_PlayerProjectile* Projectile = ProjectileShooterComponent->FireProjectile(AimPoint, ProjectileClass, DamageEffectClass, Damage, AvatarActor, bHeadshot);
+	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(AvatarActor);
+	UT_InventoryComponent* Inventory = IsValid(PlayerCharacter) ? PlayerCharacter->GetInventoryComponent() : nullptr;
+	AT_QuestGameState* QuestGameState = AvatarActor->GetWorld() ? AvatarActor->GetWorld()->GetGameState<AT_QuestGameState>() : nullptr;
+	const bool bForbiddenPistolShot = IsValid(QuestGameState) && IsValid(Inventory)
+		&& QuestGameState->IsForbiddenPistolItem(Inventory->GetEquippedItem());
+	AT_PlayerProjectile* Projectile = ProjectileShooterComponent->FireProjectile(
+		AimPoint, ProjectileClass, DamageEffectClass, Damage, AvatarActor, bHeadshot, 0.f, bForbiddenPistolShot);
 	if (!IsValid(Projectile)) return;
 
 	// 射击成功才扣除 1 发弹匣弹药（仅权威端会生成投射物）
-	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(AvatarActor);
 	UT_AttributeSet* AttributeSet = IsValid(PlayerCharacter) ? Cast<UT_AttributeSet>(PlayerCharacter->GetAttributeSet()) : nullptr;
 	if (IsValid(AttributeSet)) UT_GuardAmmoLibrary::ApplyShotCost(AttributeSet);
 }

@@ -395,6 +395,10 @@ bool FTGuardInvestigationSelectionTest::RunTest(const FString& Parameters)
 	Controllers[2]->SetAIState(ETGuardAIState::Combat);
 	DeadGuard->SetAlive(false);
 
+	TestTrue(TEXT("瓶子落地噪音使用专用 Tag"),
+		UT_GuardAlertSubsystem::IsThrowableImpactNoise(UT_GuardAlertSubsystem::ThrowableImpactNoiseTag));
+	TestFalse(TEXT("脚步声不是投掷物落地噪音"),
+		UT_GuardAlertSubsystem::IsThrowableImpactNoise(FName(TEXT("GuardNoise.Footstep.Walk"))));
 	TestTrue(TEXT("Throwable 只选择最近的存活非 Combat Guard"),
 		UT_GuardAlertSubsystem::SelectNearestEligibleGuard(Guards, FVector::ZeroVector, 1500.f) == NearGuard);
 

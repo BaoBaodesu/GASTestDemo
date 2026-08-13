@@ -7,8 +7,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/CollisionProfile.h"
-#include "PhysicsEngine/BodyInstance.h"
 #include "Inventory/T_ItemDefinition.h"
+#include "PhysicsEngine/BodyInstance.h"
 
 
 AT_PickUpItems::AT_PickUpItems()
@@ -30,7 +30,8 @@ AT_PickUpItems::AT_PickUpItems()
 	PhysicsRoot->SetEnableGravity(true);
 	PhysicsRoot->SetLinearDamping(4.f);
 	PhysicsRoot->SetAngularDamping(12.f);
-	PhysicsRoot->SetGenerateOverlapEvents(false);
+	// 任务交付面板通过重叠识别世界中的实体掉落物；该组件没有重叠回调，不会改变拾取逻辑。
+	PhysicsRoot->SetGenerateOverlapEvents(true);
 	PhysicsRoot->SetCanEverAffectNavigation(false);
 	PhysicsRoot->BodyInstance.bLockXRotation = true;
 	PhysicsRoot->BodyInstance.bLockYRotation = true;

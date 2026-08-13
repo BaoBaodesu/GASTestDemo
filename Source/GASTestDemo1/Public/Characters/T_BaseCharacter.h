@@ -20,9 +20,11 @@ class UAbilitySystemComponent;
 class UT_AbilitySystemComponent;
 class UGameplayEffect;
 class UT_LockOnComponent;
+class AT_BaseCharacter;
 
 // 声明一个 ASC 初始化完成事件
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FASCInitialized, UAbilitySystemComponent*, ASC, UAttributeSet*, AS);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTCharacterDeathSignature, AT_BaseCharacter*, DeadCharacter);
 
 UCLASS(Abstract)
 class GASTESTDEMO1_API AT_BaseCharacter : public ACharacter, public IAbilitySystemInterface
@@ -48,6 +50,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable)
 	FASCInitialized OnASCInitialized;
+
+	UPROPERTY(BlueprintAssignable, Category = "Crash|Death")
+	FTCharacterDeathSignature OnCharacterDied;
 	
 	UFUNCTION(BlueprintCallable, Category = "Crash|Death")
 	virtual void HandleRespawn();

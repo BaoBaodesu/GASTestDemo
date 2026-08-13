@@ -9,20 +9,30 @@
 #include "NavigationSystem.h"
 #include "Perception/AISense_Hearing.h"
 
+const FName UT_GuardAlertSubsystem::ThrowableImpactNoiseTag(TEXT("GuardNoise.Throwable.Impact"));
+
+bool UT_GuardAlertSubsystem::IsThrowableImpactNoise(FName NoiseTag)
+{
+	return NoiseTag == ThrowableImpactNoiseTag;
+}
+
 AT_GuardCharacter* UT_GuardAlertSubsystem::ReportThrowableImpactNoise(
 	FVector Location, AActor* Instigator, float Loudness, float MaxRange)
 {
 	UWorld* World = GetWorld();
 	if (!IsValid(World)) return nullptr;
+	(void)Instigator;
 
 	const float EffectiveRange = FMath::Max(MaxRange, 0.f);
+	// 不把玩家绑到听觉 Instigator。否则范围内每个 Guard 都会走 HandleHearingStimulus，
+	// 进入 Suspicious 并朝 Last Known 移动，看起来像所有人都上前查看。
 	UAISense_Hearing::ReportNoiseEvent(
 		World,
 		Location,
 		FMath::Max(Loudness, 0.f),
-		Instigator,
+		nullptr,
 		EffectiveRange,
-		FName(TEXT("GuardNoise.Throwable.Impact")));
+		ThrowableImpactNoiseTag);
 
 	UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
 	TArray<AT_GuardCharacter*> ReachableCandidates;

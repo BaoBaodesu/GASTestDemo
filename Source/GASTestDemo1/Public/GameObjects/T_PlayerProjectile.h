@@ -23,7 +23,7 @@ public:
 	void InitializeProjectile(TSubclassOf<UGameplayEffect> InDamageEffectClass, float InDamage, bool bInHeadshot,
 		UNiagaraSystem* InTrailSystem, UNiagaraSystem* InImpactSystem,
 		USoundBase* InImpactSound, USoundAttenuation* InImpactSoundAttenuation,
-		AActor* WeaponActor);
+		AActor* WeaponActor, bool bInForbiddenPistolShot = false);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -74,5 +74,6 @@ private:
 
 	float Damage{0.f};
 	bool bHeadshot{false};
+	bool bForbiddenPistolShot{false};
 	bool bImpactHandled{false};
 };

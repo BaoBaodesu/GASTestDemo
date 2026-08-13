@@ -7,6 +7,8 @@
 #include "T_PrimaryComboAbility.generated.h"
 
 struct FHitResult;
+class UNiagaraSystem;
+class USoundBase;
 
 /**
  * 玩家主攻连击：蒙太奇分段播放 + ComboWindow 输入；命中由 AnimNotifyState_ComboHit 驱动。
@@ -40,6 +42,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage")
 	TSubclassOf<class UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Impact")
+	TObjectPtr<USoundBase> ImpactSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combo|Impact")
+	TObjectPtr<UNiagaraSystem> ImpactSystem;
 
 	// 已废弃：命中改由 AnimNotifyState_ComboHit 骨骼检测，保留以免破坏蓝图序列化
 	UPROPERTY(EditDefaultsOnly, Category = "Combo|Damage|Deprecated", meta = (DeprecatedProperty, DeprecationMessage = "Use AnimNotifyState_ComboHit sockets instead."))

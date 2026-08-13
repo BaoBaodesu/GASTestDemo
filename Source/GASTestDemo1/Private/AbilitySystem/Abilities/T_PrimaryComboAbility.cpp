@@ -10,6 +10,10 @@
 #include "Engine/HitResult.h"
 #include "GameplayEffect.h"
 #include "GameplayTags/TTags.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 UT_PrimaryComboAbility::UT_PrimaryComboAbility()
@@ -21,6 +25,20 @@ UT_PrimaryComboAbility::UT_PrimaryComboAbility()
 	if (DamageEffectFinder.Succeeded())
 	{
 		DamageEffectClass = DamageEffectFinder.Class;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundBase> ImpactSoundFinder(
+		TEXT("/Game/GASTestDemo/Audio/SC_Punch.SC_Punch"));
+	if (ImpactSoundFinder.Succeeded())
+	{
+		ImpactSound = ImpactSoundFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> ImpactSystemFinder(
+		TEXT("/Game/VisualSandbox/FX/FXS_Default_Impact_Flesh.FXS_Default_Impact_Flesh"));
+	if (ImpactSystemFinder.Succeeded())
+	{
+		ImpactSystem = ImpactSystemFinder.Object;
 	}
 }
 
@@ -139,6 +157,17 @@ bool UT_PrimaryComboAbility::ApplyComboHitTarget(AActor* HitActor, const FHitRes
 
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	ActorsHitThisSwing.Add(HitActor);
+
+	const FVector ImpactLocation = HitResult ? FVector(HitResult->ImpactPoint) : HitActor->GetActorLocation();
+	const FRotator ImpactRotation = HitResult ? HitResult->ImpactNormal.Rotation() : FRotator::ZeroRotator;
+	if (IsValid(ImpactSound))
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, ImpactLocation);
+	}
+	if (IsValid(ImpactSystem))
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactSystem, ImpactLocation, ImpactRotation);
+	}
 
 	FGameplayEventData HitReactPayload;
 	HitReactPayload.Instigator = AvatarActor;

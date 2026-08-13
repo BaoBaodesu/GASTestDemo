@@ -18,6 +18,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Perception/AISense_Damage.h"
 #include "Perception/AISense_Hearing.h"
+#include "Quest/T_QuestGameState.h"
 
 AT_PlayerProjectile::AT_PlayerProjectile()
 {
@@ -50,11 +51,13 @@ AT_PlayerProjectile::AT_PlayerProjectile()
 
 void AT_PlayerProjectile::InitializeProjectile(TSubclassOf<UGameplayEffect> InDamageEffectClass,
 	float InDamage, bool bInHeadshot, UNiagaraSystem* InTrailSystem, UNiagaraSystem* InImpactSystem,
-	USoundBase* InImpactSound, USoundAttenuation* InImpactSoundAttenuation, AActor* WeaponActor)
+	USoundBase* InImpactSound, USoundAttenuation* InImpactSoundAttenuation, AActor* WeaponActor,
+	bool bInForbiddenPistolShot)
 {
 	DamageEffectClass = InDamageEffectClass;
 	Damage = InDamage;
 	bHeadshot = bInHeadshot;
+	bForbiddenPistolShot = bInForbiddenPistolShot;
 	TrailSystem = InTrailSystem;
 	ImpactSystem = InImpactSystem;
 	ImpactSound = InImpactSound;
@@ -108,10 +111,11 @@ void AT_PlayerProjectile::OnRep_TrailSystem()
 void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (!HasAuthority() || bImpactHandled || !IsValid(OtherActor) || OtherActor == GetOwner() || OtherActor == GetInstigator()) return;
+	if (!HasAuthority() || bImpactHandled) return;
+	if (IsValid(OtherActor) && (OtherActor == GetOwner() || OtherActor == GetInstigator())) return;
 	// Fallback when the move-ignore list has not taken effect yet: no damage and no impact FX.
 	// The blocking hit already stopped ProjectileMovement, so destroy it instead of leaving it frozen.
-	if (OtherActor->IsA<AT_PlayerCharacter>() && UT_BlueprintLibrary::IsInvincible(OtherActor))
+	if (IsValid(OtherActor) && OtherActor->IsA<AT_PlayerCharacter>() && UT_BlueprintLibrary::IsInvincible(OtherActor))
 	{
 		Destroy();
 		return;
@@ -130,6 +134,12 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 			NoiseInstigator,
 			800.f,
 			TEXT("GuardNoise.BulletImpact"));
+	}
+	// BSP/盒体笔刷的碰撞可能只有 UModelComponent，没有可用的 Actor；命中特效播放后直接结束。
+	if (!IsValid(OtherActor))
+	{
+		Destroy();
+		return;
 	}
 
 	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
@@ -181,6 +191,13 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 			SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 			const float HealthAfter = IsValid(TargetAttributes) ? TargetAttributes->GetHealth() : HealthBefore;
 			bHitConfirmed = IsValid(TargetAttributes) && HealthAfter < HealthBefore;
+			if (bForbiddenPistolShot && HealthBefore > 0.f && HealthAfter <= 0.f && OtherActor->IsA<AT_EnemyCharacter>())
+			{
+				if (AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr)
+				{
+					QuestGameState->NotifyForbiddenPistolKill();
+				}
+			}
 		}
 	}
 

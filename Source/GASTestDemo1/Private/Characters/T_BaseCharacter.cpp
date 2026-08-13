@@ -67,7 +67,9 @@ void AT_BaseCharacter::OnHealthChanged(const FOnAttributeChangeData& AttributeCh
 
 void AT_BaseCharacter::HandleDeath()
 {
+	if (!bAlive) return;
 	bAlive = false;
+	OnCharacterDied.Broadcast(this);
 }
 
 void AT_BaseCharacter::HandleRespawn()

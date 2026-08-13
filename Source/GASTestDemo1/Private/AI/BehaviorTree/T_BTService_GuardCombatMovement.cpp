@@ -7,7 +7,6 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Characters/T_GuardCharacter.h"
 #include "GameplayTags/TTags.h"
-#include "NavigationPath.h"
 #include "NavigationSystem.h"
 
 UT_BTService_GuardCombatMovement::UT_BTService_GuardCombatMovement()
@@ -15,6 +14,7 @@ UT_BTService_GuardCombatMovement::UT_BTService_GuardCombatMovement()
 	NodeName = TEXT("Guard Combat Movement");
 	Interval = 1.5f;
 	RandomDeviation = 0.5f;
+	bCallTickOnSearchStart = false;
 	CombatMoveLocationKey.SelectedKeyName = GuardBBKeys::CombatMoveLocation;
 }
 
@@ -52,9 +52,7 @@ void UT_BTService_GuardCombatMovement::TickNode(UBehaviorTreeComponent& OwnerCom
 		const FVector Candidate = Origin + Right * SideSign * FMath::FRandRange(150.f, 300.f);
 		FNavLocation Projected;
 		const bool bProjected = NavSys->ProjectPointToNavigation(Candidate, Projected, NavigationQueryExtent);
-		UNavigationPath* Path = bProjected ? NavSys->FindPathToLocationSynchronously(Guard->GetWorld(), Origin, Projected.Location, Guard) : nullptr;
-		const bool bPathValid = IsValid(Path) && Path->IsValid() && !Path->IsPartial();
-		if (!IsProjectedMoveUsable(bProjected, bPathValid)) continue;
+		if (!IsProjectedMoveUsable(bProjected, bProjected)) continue;
 
 		BB->SetValueAsVector(CombatMoveLocationKey.SelectedKeyName, Projected.Location);
 		Controller->MoveToLocation(Projected.Location, 60.f, true, true, true, false, nullptr, true);

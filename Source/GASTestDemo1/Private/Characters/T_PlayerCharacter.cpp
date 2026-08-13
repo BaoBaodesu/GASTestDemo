@@ -33,6 +33,7 @@
 #include "Inventory/T_ItemDefinition.h"
 #include "Net/UnrealNetwork.h"
 #include "Perception/AISense_Hearing.h"
+#include "Quest/T_QuestGameState.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -397,6 +398,13 @@ bool AT_PlayerCharacter::UseInventoryItem_Implementation(UT_ItemDefinition* Item
 	if (!Spec.IsValid()) return false;
 
 	ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+	if (HasAuthority())
+	{
+		if (AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr)
+		{
+			if (QuestGameState->IsForbiddenHealthItem(ItemDefinition)) QuestGameState->NotifyForbiddenHealthItemUsed();
+		}
+	}
 	return true;
 }
 

@@ -15,6 +15,10 @@ class UT_InventoryComponent;
 class UT_InventoryWidget;
 class UT_AttributeWidget;
 class UT_AttributeSet;
+class UT_GameMenuWidget;
+class UT_LastChanceWidget;
+class UT_QuestWidget;
+class AT_QuestGameState;
 struct FInputActionValue;
 struct FGameplayTag;
 struct FOnAttributeChangeData;
@@ -40,9 +44,17 @@ public:
 
 	void HandleCatchMovementModeChanged(EMovementMode MovementMode);
 	void CancelRunAndCatch();
+
+	void HandleGameMenuContinue();
+	void RestartQuestLevel();
+	void QuitQuestGame();
+
+	UFUNCTION(Client, Reliable)
+	void ClientShowLastChance();
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void SetupInputComponent() override;
 
@@ -105,6 +117,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|HUD")
 	TSubclassOf<UUserWidget> PlayerHUDWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Crash|Input|Quest")
+	TObjectPtr<UInputAction> QuestAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|Quest")
+	TSubclassOf<UT_QuestWidget> QuestWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Crash|UI|Quest")
+	TSubclassOf<UT_GameMenuWidget> GameMenuWidgetClass;
+
 	void Jump();
 	void StopJumping();
 	void Move(const FInputActionValue& Value);
@@ -122,6 +143,15 @@ private:
 	void StopPrimary();
 	void PickUp();
 	void ActivateQuickSlot(FKey Key);
+	void ToggleQuestUI();
+	void ToggleGameMenu();
+	void OpenGameMenu(uint8 MenuMode);
+	void CloseGameMenu();
+	void BindQuestState();
+	void HideLastChance();
+
+	UFUNCTION()
+	void HandleQuestStateChanged();
 	void ActivateAbility(const FGameplayTag& AbilityTag) const;
 	void ReleaseAbility(const FGameplayTag& AbilityTag) const;
 	bool IsAlive() const;
@@ -138,6 +168,20 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UUserWidget> PlayerHUDWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UT_QuestWidget> QuestWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UT_GameMenuWidget> GameMenuWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UT_LastChanceWidget> LastChanceWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AT_QuestGameState> BoundQuestGameState;
+
+	FTimerHandle LastChanceTimerHandle;
 
 	bool bWasMouseCursorVisible = false;
 

@@ -3,6 +3,7 @@
 
 #include "Characters/T_GuardCharacter.h"
 
+#include "AI/Abilities/T_GuardAim.h"
 #include "AI/T_ShooterAIController.h"
 #include "AbilitySystem/Abilities/Enemy/T_HitReact.h"
 #include "AbilitySystemComponent.h"
@@ -244,10 +245,11 @@ void AT_GuardCharacter::BeginPlay()
 	}
 
 	RegisterAimingTagWatch();
-	SyncAnimIsAiming();
 	InitializePatrolRoute();
 	if (GetNetMode() != NM_DedicatedServer && IsValid(AlertSound)) UGameplayStatics::PrimeSound(AlertSound);
 	InitializeAwarenessWidget();
+	PrimeCombatPresentation();
+	SyncAnimIsAiming();
 	RefreshAwarenessWidget();
 
 	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
@@ -301,9 +303,12 @@ void AT_GuardCharacter::RefreshAwarenessWidget()
 	if (!IsValid(AwarenessWidget)) InitializeAwarenessWidget();
 	if (!IsValid(AwarenessWidgetComponent) || !IsValid(AwarenessWidget)) return;
 
-	const bool bVisible = GuardAwareness > 0.f;
+	const bool bVisible = GuardAwareness > 0.f || CombatPresentationPrimeFrames > 0;
 	AwarenessWidgetComponent->SetHiddenInGame(!bVisible);
-	AwarenessWidget->UpdateAwareness(GuardAwareness, GuardAIState, bGuardHasVisualContact);
+	AwarenessWidget->UpdateAwareness(
+		CombatPresentationPrimeFrames > 0 ? FMath::Max(GuardAwareness, 1.f) : GuardAwareness,
+		GuardAIState,
+		bGuardHasVisualContact);
 }
 
 void AT_GuardCharacter::SetGuardAIPresentation(float InAwareness, ETGuardAIState InAIState, bool bHasVisualContact)
@@ -414,9 +419,27 @@ void AT_GuardCharacter::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UP
 
 void AT_GuardCharacter::SyncAnimIsAiming()
 {
+	bool bForceShowWeapon = false;
+	if (CombatPresentationPrimeFrames > 0)
+	{
+		--CombatPresentationPrimeFrames;
+		bForceShowWeapon = true;
+		if (CombatPresentationPrimeFrames == 0) RefreshAwarenessWidget();
+	}
+
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	UAnimInstance* AnimInstance = IsValid(CharacterMesh) ? CharacterMesh->GetAnimInstance() : nullptr;
-	if (!IsValid(AnimInstance)) return;
+	if (!IsValid(AnimInstance))
+	{
+		if (bForceShowWeapon) ApplyWeaponVisibility(true);
+		return;
+	}
+
+	if (!IsValid(PrimedAimPoseMontage) && !bAimPosePrimeAttempted)
+	{
+		PrimedAimPoseMontage = UT_GuardAim::PrimeAimPose(AnimInstance);
+		bAimPosePrimeAttempted = true;
+	}
 
 	UClass* AnimClass = AnimInstance->GetClass();
 	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -462,7 +485,7 @@ void AT_GuardCharacter::SyncAnimIsAiming()
 	SetAnimByteOrEnum(TEXT("GripType"), DesiredGrip);
 
 	// 非警觉时收起 ADS Slot 姿势（GuardAim 用 DynamicMontage 强制举枪）
-	if (!bShouldAim)
+	if (!bShouldAim && bLastShouldAim)
 	{
 		const float SlotWeightDefault = AnimInstance->GetSlotNodeGlobalWeight(TEXT("DefaultSlot"));
 		const float SlotWeightUpper = AnimInstance->GetSlotNodeGlobalWeight(TEXT("UpperBody"));
@@ -475,23 +498,36 @@ void AT_GuardCharacter::SyncAnimIsAiming()
 			AnimInstance->StopSlotAnimation(0.2f, TEXT("UpperBody"));
 		}
 	}
+	bLastShouldAim = bShouldAim;
 
-	// 非警觉隐藏枪械，避免手持枪模型看起来像一直举枪
-	const bool bShowWeapon = bAlertAiming || bHasAimingTag;
-	if (IsValid(WeaponActor))
+	const bool bShowWeapon = bForceShowWeapon || bAlertAiming || bHasAimingTag;
+	ApplyWeaponVisibility(bShowWeapon);
+}
+
+void AT_GuardCharacter::PrimeCombatPresentation()
+{
+	CombatPresentationPrimeFrames = 3;
+	ApplyWeaponVisibility(true);
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 	{
-		WeaponActor->SetActorHiddenInGame(!bShowWeapon);
+		UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance();
+		PrimedAimPoseMontage = UT_GuardAim::PrimeAimPose(AnimInstance);
+		if (IsValid(AnimInstance)) bAimPosePrimeAttempted = true;
 	}
+}
+
+void AT_GuardCharacter::ApplyWeaponVisibility(bool bShowWeapon)
+{
+	if (bWeaponVisibilityApplied && bWeaponVisible == bShowWeapon) return;
+
+	bWeaponVisibilityApplied = true;
+	bWeaponVisible = bShowWeapon;
+	if (IsValid(WeaponActor)) WeaponActor->SetActorHiddenInGame(!bShowWeapon);
 	if (IsValid(WeaponMesh))
 	{
-		// 不要向子组件传播：否则会把已关掉的 Sphere 线框重新显示出来
 		WeaponMesh->SetHiddenInGame(!bShowWeapon, false);
 	}
-	// 必须在 Mesh 显隐之后再关 Shape，避免传播/Actor 显隐冲掉设置
-	if (IsValid(WeaponActor))
-	{
-		DisableWeaponCollisionDisplay();
-	}
+	if (IsValid(WeaponActor)) DisableWeaponCollisionDisplay();
 }
 
 void AT_GuardCharacter::RegisterAimingTagWatch()

@@ -22,7 +22,8 @@ public:
 	AT_PlayerProjectile* FireProjectile(const FVector& AimPoint,
 		TSubclassOf<AT_PlayerProjectile> ProjectileClass,
 		TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor,
-		bool bHeadshot = false, float SpreadHalfAngleDegrees = 0.f);
+		bool bHeadshot = false, float SpreadHalfAngleDegrees = 0.f,
+		bool bForbiddenPistolShot = false);
 
 	static FVector ApplySpreadToDirection(const FVector& Direction, float SpreadHalfAngleDegrees);
 

@@ -94,6 +94,29 @@ void UT_GuardAim::RestartAimPose()
 	StartAimPoseMontage(GetAvatarActorFromActorInfo());
 }
 
+UAnimMontage* UT_GuardAim::PrimeAimPose(UAnimInstance* AnimInstance)
+{
+	const UT_GuardAim* CDO = GetDefault<UT_GuardAim>();
+	if (!IsValid(AnimInstance) || !IsValid(CDO) || !IsValid(CDO->AimIdleSequence)) return nullptr;
+
+	FName ResolvedSlot = CDO->AimSlotName;
+	if (ResolvedSlot.IsNone() && IsValid(CDO->SlotReferenceMontage) && CDO->SlotReferenceMontage->SlotAnimTracks.Num() > 0)
+	{
+		ResolvedSlot = CDO->SlotReferenceMontage->SlotAnimTracks[0].SlotName;
+	}
+	if (ResolvedSlot.IsNone()) ResolvedSlot = TEXT("DefaultSlot");
+
+	UAnimMontage* TempMontage = AnimInstance->PlaySlotAnimationAsDynamicMontage(
+		CDO->AimIdleSequence,
+		ResolvedSlot,
+		0.f,
+		0.f,
+		1.f,
+		1000);
+	if (IsValid(TempMontage)) AnimInstance->Montage_Stop(0.f, TempMontage);
+	return TempMontage;
+}
+
 void UT_GuardAim::StartAimPoseMontage(AActor* AvatarActor)
 {
 	StopAimPoseMontage(AvatarActor);
@@ -104,6 +127,13 @@ void UT_GuardAim::StartAimPoseMontage(AActor* AvatarActor)
 	USkeletalMeshComponent* CharacterMesh = Guard->GetMesh();
 	UAnimInstance* AnimInstance = IsValid(CharacterMesh) ? CharacterMesh->GetAnimInstance() : nullptr;
 	if (!IsValid(AnimInstance)) return;
+
+	if (UAnimMontage* PrimedMontage = Guard->GetPrimedAimPoseMontage())
+	{
+		AnimInstance->Montage_Play(PrimedMontage, 1.f);
+		ActiveAimPoseMontage = PrimedMontage;
+		return;
+	}
 
 	FName ResolvedSlot = AimSlotName;
 	if (ResolvedSlot.IsNone() && IsValid(SlotReferenceMontage) && SlotReferenceMontage->SlotAnimTracks.Num() > 0)

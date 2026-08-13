@@ -43,7 +43,7 @@ void UT_AIAwarenessWidget::UpdateAwareness(float InAwareness, ETGuardAIState InA
 		UTexture2D* Icon = bFullyDetected ? AlertIconTexture.Get() : SuspicionIconTexture.Get();
 		if (IsValid(Icon) && Image_Awareness->GetBrush().GetResourceObject() != Icon)
 		{
-			Image_Awareness->SetBrushFromTexture(Icon, true);
+			Image_Awareness->SetBrushFromTexture(Icon, false);
 		}
 	}
 }

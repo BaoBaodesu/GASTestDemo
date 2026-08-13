@@ -3,6 +3,7 @@
 #include "AI/T_ShooterAIController.h"
 
 #include "AbilitySystemComponent.h"
+#include "AI/T_GuardAlertSubsystem.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -11,6 +12,7 @@
 #include "Characters/T_GuardCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameObjects/T_Throwable.h"
 #include "GameplayTags/TTags.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISense.h"
@@ -20,6 +22,7 @@
 #include "Perception/AISense_Damage.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Sight.h"
+#include "Quest/T_QuestGameState.h"
 
 namespace GuardBBKeys
 {
@@ -35,7 +38,6 @@ namespace GuardBBKeys
 
 namespace
 {
-	const FName ThrowableNoiseTag(TEXT("GuardNoise.Throwable.Impact"));
 	constexpr float InvestigationMinAwareness = 30.f;
 	constexpr float DistractionAwarenessBoost = 12.f;
 	constexpr float DistractionAwarenessCap = 45.f;
@@ -261,7 +263,9 @@ void AT_ShooterAIController::HandleSightStimulus(AActor* Actor, const FAIStimulu
 
 void AT_ShooterAIController::HandleHearingStimulus(AActor* Actor, const FAIStimulus& Stimulus)
 {
-	if (!Stimulus.WasSuccessfullySensed() || Stimulus.Tag == ThrowableNoiseTag || !IsValidPlayerTarget(Actor)) return;
+	if (!Stimulus.WasSuccessfullySensed()) return;
+	if (UT_GuardAlertSubsystem::IsThrowableImpactNoise(Stimulus.Tag) || Actor->IsA<AT_Throwable>()) return;
+	if (!IsValidPlayerTarget(Actor)) return;
 
 	LastKnownTargetLocation = Stimulus.StimulusLocation;
 	SyncLastKnownLocation();
@@ -443,6 +447,10 @@ void AT_ShooterAIController::SetAIState(ETGuardAIState NewState)
 	if (NewState == ETGuardAIState::Return)
 	{
 		ClearFocus(EAIFocusPriority::Gameplay);
+	}
+	if (AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr)
+	{
+		QuestGameState->NotifyGuardStateChanged(PreviousState, NewState);
 	}
 }
 
