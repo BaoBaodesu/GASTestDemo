@@ -137,18 +137,22 @@ bool AT_QuestGameState::IsRequiredPickup(const AT_PickUpItems* Pickup) const
 
 bool AT_QuestGameState::IsForbiddenPistolItem(const UT_ItemDefinition* ItemDefinition) const
 {
+	const AT_PickUpItems* ForbiddenPickup = ForbiddenPistolPickupClass
+		? ForbiddenPistolPickupClass->GetDefaultObject<AT_PickUpItems>()
+		: nullptr;
 	return IsValid(ItemDefinition)
-		&& ItemDefinition->PickUpActorClass != nullptr
-		&& ForbiddenPistolPickupClass != nullptr
-		&& ItemDefinition->PickUpActorClass->IsChildOf(ForbiddenPistolPickupClass);
+		&& IsValid(ForbiddenPickup)
+		&& ForbiddenPickup->GetItemDefinition() == ItemDefinition;
 }
 
 bool AT_QuestGameState::IsForbiddenHealthItem(const UT_ItemDefinition* ItemDefinition) const
 {
+	const AT_PickUpItems* ForbiddenPickup = ForbiddenHealthPickupClass
+		? ForbiddenHealthPickupClass->GetDefaultObject<AT_PickUpItems>()
+		: nullptr;
 	return IsValid(ItemDefinition)
-		&& ItemDefinition->PickUpActorClass != nullptr
-		&& ForbiddenHealthPickupClass != nullptr
-		&& ItemDefinition->PickUpActorClass->IsChildOf(ForbiddenHealthPickupClass);
+		&& IsValid(ForbiddenPickup)
+		&& ForbiddenPickup->GetItemDefinition() == ItemDefinition;
 }
 
 void AT_QuestGameState::HandleRegisteredEnemyDeath(AT_BaseCharacter* DeadCharacter)

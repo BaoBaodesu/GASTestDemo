@@ -21,7 +21,9 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "Characters/T_GuardCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
+#if WITH_EDITOR
 #include "Editor.h"
+#endif
 #include "GameplayTags/TTags.h"
 #include "GameObjects/T_Throwable.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -41,6 +43,15 @@ namespace
 		Entry.EntryName = EntryName;
 		Entry.KeyType = KeyType;
 		BlackboardData->Keys.Add(Entry);
+	}
+
+	UWorld* GetGuardTestEditorWorld()
+	{
+#if WITH_EDITOR
+		return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+#else
+		return nullptr;
+#endif
 	}
 }
 
@@ -207,7 +218,7 @@ bool FTGuardBlackboardClearTest::RunTest(const FString& Parameters)
 	AddBlackboardKey(BlackboardData, GuardBBKeys::HomeLocation, NewObject<UBlackboardKeyType_Vector>());
 	AddBlackboardKey(BlackboardData, GuardBBKeys::CombatMoveLocation, NewObject<UBlackboardKeyType_Vector>());
 
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UWorld* World = GetGuardTestEditorWorld();
 	if (!IsValid(World))
 	{
 		// 无编辑器世界时跳过黑板行为验证
@@ -374,7 +385,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FTGuardInvestigationSelectionTest::RunTest(const FString& Parameters)
 {
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UWorld* World = GetGuardTestEditorWorld();
 	if (!IsValid(World)) return true;
 
 	AT_GuardCharacter* NearGuard = World->SpawnActor<AT_GuardCharacter>(FVector(100.f, 0.f, 0.f), FRotator::ZeroRotator);
@@ -432,7 +443,7 @@ bool FTGuardThrowableImpactTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("达到速度且超过冷却后产生落地事件"), AT_Throwable::IsImpactSignificant(500.f, 150.f, 0.2f, 0.f, 0.15f));
 	TestTrue(TEXT("零冷却允许连续有效碰撞"), AT_Throwable::IsImpactSignificant(150.f, 150.f, 0.f, 0.f, 0.f));
 
-	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UWorld* World = GetGuardTestEditorWorld();
 	AT_Throwable* Throwable = IsValid(World) ? World->SpawnActor<AT_Throwable>() : nullptr;
 	UProjectileMovementComponent* ProjectileMovement = IsValid(Throwable)
 		? Throwable->FindComponentByClass<UProjectileMovementComponent>()

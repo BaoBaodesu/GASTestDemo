@@ -5,7 +5,6 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
-#include "InterchangeTranslatorBase.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_EnemyCharacter.h"
