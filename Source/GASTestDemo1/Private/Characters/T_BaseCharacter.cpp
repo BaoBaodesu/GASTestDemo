@@ -59,7 +59,7 @@ void AT_BaseCharacter::InitializeAttributes() const
 
 void AT_BaseCharacter::OnHealthChanged(const FOnAttributeChangeData& AttributeChangeData)
 {
-	if (AttributeChangeData.NewValue <= 0.0f)
+	if (AttributeChangeData.NewValue <= 0.0f && IsAlive())
 	{
 		HandleDeath();
 	}

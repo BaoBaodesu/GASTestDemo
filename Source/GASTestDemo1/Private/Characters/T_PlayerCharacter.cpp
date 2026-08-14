@@ -313,6 +313,7 @@ void AT_PlayerCharacter::OnRep_PlayerState()
 
 void AT_PlayerCharacter::HandleDeath()
 {
+	if (!IsAlive()) return;
 	if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(GetController())) PlayerController->CancelRunAndCatch();
 	else SetRunInputHeld(false);
 	Super::HandleDeath();

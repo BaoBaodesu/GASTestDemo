@@ -69,30 +69,40 @@ EBTNodeResult::Type UT_BTTask_GuardMoveTo::MapMoveRequestResult(EPathFollowingRe
 
 void UT_BTTask_GuardMoveTo::StartMove(UBehaviorTreeComponent& OwnerComp)
 {
-	// 先作废旧请求 ID，忽略被替换/中止的旧移动回调
-	CurrentMoveRequestID = FAIRequestID::InvalidRequest;
-	ElapsedTime = 0.f;
+	if (bIsStartingMove) return;
+	bIsStartingMove = true;
 
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
 	if (!IsValid(AIController) || !IsValid(BlackboardComp) || !BlackboardComp->IsVectorValueSet(MoveToKeyName))
 	{
+		bIsStartingMove = false;
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 
 	const FVector Destination = BlackboardComp->GetValueAsVector(MoveToKeyName);
+	if (CurrentMoveRequestID.IsValid() && Destination.Equals(LastMoveDestination, 1.f))
+	{
+		bIsStartingMove = false;
+		return;
+	}
+
+	ElapsedTime = 0.f;
+	CurrentMoveRequestID = FAIRequestID::InvalidRequest;
 	const EPathFollowingRequestResult::Type MoveResult = AIController->MoveToLocation(
 		Destination, AcceptanceRadius, true, true, true, false, nullptr, true);
+	LastMoveDestination = Destination;
+
 	const EBTNodeResult::Type TaskResult = MapMoveRequestResult(MoveResult);
 	if (TaskResult != EBTNodeResult::InProgress)
 	{
+		bIsStartingMove = false;
 		FinishLatentTask(OwnerComp, TaskResult);
 		return;
 	}
 
 	OwningComponent = &OwnerComp;
-
 	if (UPathFollowingComponent* PathComp = AIController->GetPathFollowingComponent())
 	{
 		PathComp->OnRequestFinished.RemoveAll(this);
@@ -101,16 +111,22 @@ void UT_BTTask_GuardMoveTo::StartMove(UBehaviorTreeComponent& OwnerComp)
 	}
 	else
 	{
+		bIsStartingMove = false;
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 
-	if (bObserveBlackboardValue)
+	if (bObserveBlackboardValue && ObservedKeyID == FBlackboard::InvalidKey)
 	{
 		ObservedKeyID = BlackboardComp->GetKeyID(MoveToKeyName);
-		BlackboardComp->RegisterObserver(ObservedKeyID, this,
-			FOnBlackboardChangeNotification::CreateUObject(this, &ThisClass::OnBlackboardValueChanged));
+		if (ObservedKeyID != FBlackboard::InvalidKey)
+		{
+			BlackboardComp->RegisterObserver(ObservedKeyID, this,
+				FOnBlackboardChangeNotification::CreateUObject(this, &ThisClass::OnBlackboardValueChanged));
+		}
 	}
+
+	bIsStartingMove = false;
 }
 
 void UT_BTTask_GuardMoveTo::OnMoveFinished(FAIRequestID RequestID, const FPathFollowingResult& Result)
@@ -207,8 +223,10 @@ void UT_BTTask_GuardMoveTo::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, ui
 	OwningComponent = nullptr;
 	ObservedKeyID = FBlackboard::InvalidKey;
 	CurrentMoveRequestID = FAIRequestID::InvalidRequest;
+	LastMoveDestination = FVector::ZeroVector;
 	ElapsedTime = 0.f;
 	bWaitingForReturnFacing = false;
+	bIsStartingMove = false;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }

@@ -444,7 +444,8 @@ void AT_GuardCharacter::SyncAnimIsAiming()
 
 	UClass* AnimClass = AnimInstance->GetClass();
 	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	const bool bAlertAiming = AT_ShooterAIController::IsAlertAimingState(GuardAIState);
+	// 出生预热阶段也进入一次手枪瞄准分支，避免首次发现玩家时才初始化整套动画节点。
+	const bool bAlertAiming = bForceShowWeapon || AT_ShooterAIController::IsAlertAimingState(GuardAIState);
 	const bool bHasAimingTag = IsValid(ASC) && ASC->HasMatchingGameplayTag(TTags::State::Aiming);
 	const bool bShouldAim = bAlertAiming || bHasAimingTag;
 

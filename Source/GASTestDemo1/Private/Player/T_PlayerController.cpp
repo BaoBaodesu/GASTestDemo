@@ -9,7 +9,10 @@
 #include "AbilitySystem/T_AbilitySystemComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "Framework/Application/SlateApplication.h"
+#include "HAL/PlatformMisc.h"
 #include "InputAction.h"
 #include "Components/PanelWidget.h"
 #include "Characters/T_BaseCharacter.h"
@@ -32,9 +35,15 @@
 #include "UI/Quest/T_GameMenuWidget.h"
 #include "UI/Quest/T_LastChanceWidget.h"
 #include "UI/Quest/T_QuestWidget.h"
+#include "Widgets/SWindow.h"
 
 namespace
 {
+	void RequestSafeGameExit(const TSharedRef<SWindow>&)
+	{
+		FPlatformMisc::RequestExit(false);
+	}
+
 	void RestoreGameplayMouseLook(APlayerController* PlayerController)
 	{
 		if (!IsValid(PlayerController) || !PlayerController->IsLocalController()) return;
@@ -140,6 +149,14 @@ void AT_PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	if (!IsLocalController()) return;
+	if (!GIsEditor && GEngine && GEngine->GameViewport)
+	{
+		if (TSharedPtr<SWindow> GameWindow = GEngine->GameViewport->GetWindow())
+		{
+			GameWindow->SetRequestDestroyWindowOverride(
+				FRequestDestroyWindowOverride::CreateStatic(&RequestSafeGameExit));
+		}
+	}
 
 	if (!IsValid(PlayerHUDWidgetClass))
 	{

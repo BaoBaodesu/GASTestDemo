@@ -29,8 +29,13 @@ private:
 	void RespawnForLastChance(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter);
 	void FinalizeQuestFailure(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter);
 	void BindPlayerDeath(AT_PlayerCharacter* PlayerCharacter);
+	void FreezePlayerForDeathPresentation(AT_PlayerCharacter* PlayerCharacter);
+	void UnbindPendingDeathMontage(AT_PlayerCharacter* PlayerCharacter);
+	void ArmLastChanceRespawn(AT_PlayerCharacter* PlayerCharacter, float DelaySeconds);
 
 	TWeakObjectPtr<AT_PlayerCharacter> PendingRespawnPlayer;
 	TWeakObjectPtr<UAnimMontage> PendingDeathMontage;
 	FTransform PendingDeathTransform;
+	FTimerHandle LastChanceRespawnTimerHandle;
+	bool bLastChanceRespawnArmed = false;
 };

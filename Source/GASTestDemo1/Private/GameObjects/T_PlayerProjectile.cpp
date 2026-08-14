@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/T_AttributeSet.h"
 #include "Characters/T_GuardCharacter.h"
+#include "Characters/T_EnemyCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "Components/SphereComponent.h"
 #include "EngineUtils.h"
@@ -155,6 +156,13 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 	}
 	if (IsValid(SourceASC) && IsValid(TargetASC) && IsValid(DamageEffectClass) && DamageMagnitude > 0.f)
 	{
+		AT_PlayerCharacter* HitPlayer = Cast<AT_PlayerCharacter>(OtherActor);
+		if (IsValid(HitPlayer) && !HitPlayer->IsAlive())
+		{
+			Destroy();
+			return;
+		}
+
 		const bool bLethal = IsValid(TargetAttributes) && (HealthBefore - DamageMagnitude <= 0.f);
 		FGameplayEventData EventPayload;
 		EventPayload.Instigator = GetInstigator() ? GetInstigator() : GetOwner();
@@ -162,7 +170,7 @@ void AT_PlayerProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AAc
 		EventPayload.ContextHandle = TargetASC->MakeEffectContext();
 		EventPayload.ContextHandle.AddHitResult(Hit, true);
 
-		if (OtherActor->IsA<AT_PlayerCharacter>())
+		if (IsValid(HitPlayer))
 		{
 			const FGameplayTag EventTag = bLethal ? TTags::Events::Player::Death : TTags::Events::Player::HitReact;
 			TargetASC->HandleGameplayEvent(EventTag, &EventPayload);

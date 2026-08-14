@@ -422,6 +422,7 @@ void AT_ShooterAIController::SetAIState(ETGuardAIState NewState)
 	if (PreviousState != ETGuardAIState::Search && NewState == ETGuardAIState::Search) SearchElapsedTime = 0.f;
 	else if (NewState != ETGuardAIState::Search) SearchElapsedTime = 0.f;
 
+	const bool bCombatEntry = IsCombatEntry(PreviousState, NewState);
 	if (UBlackboardComponent* BB = GetBlackboardComponent())
 	{
 		BB->SetValueAsEnum(GuardBBKeys::AIState, static_cast<uint8>(AIState));

@@ -2,6 +2,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -40,10 +41,18 @@ void AT_QuestGameMode::HandlePlayerDeath(AT_BaseCharacter* DeadCharacter)
 {
 	AT_PlayerCharacter* PlayerCharacter = Cast<AT_PlayerCharacter>(DeadCharacter);
 	AT_QuestGameState* QuestGameState = GetGameState<AT_QuestGameState>();
-	if (!IsValid(PlayerCharacter) || !IsValid(QuestGameState) || QuestGameState->GetQuestOutcome() != EQuestOutcome::InProgress) return;
+	if (!IsValid(PlayerCharacter) || !IsValid(QuestGameState) || QuestGameState->GetQuestOutcome() != EQuestOutcome::InProgress)
+	{
+		return;
+	}
 
 	QuestGameState->NotifyPlayerDeath();
-	if (QuestGameState->GetPlayerDeathCount() >= 2)
+	const int32 DeathCount = QuestGameState->GetPlayerDeathCount();
+	UAnimMontage* DeathMontage = PlayerCharacter->GetAbilitySystemComponent()
+		? PlayerCharacter->GetAbilitySystemComponent()->GetCurrentMontage()
+		: nullptr;
+	UAnimInstance* AnimInstance = PlayerCharacter->GetMesh() ? PlayerCharacter->GetMesh()->GetAnimInstance() : nullptr;
+	if (DeathCount >= 2)
 	{
 		GetWorldTimerManager().SetTimerForNextTick(
 			FTimerDelegate::CreateUObject(this, &ThisClass::FinalizeQuestFailure, TWeakObjectPtr<AT_PlayerCharacter>(PlayerCharacter)));
@@ -55,64 +64,35 @@ void AT_QuestGameMode::HandlePlayerDeath(AT_BaseCharacter* DeadCharacter)
 		PlayerController->ClientShowLastChance();
 	}
 
-	UAnimMontage* DeathMontage = PlayerCharacter->GetAbilitySystemComponent()
-		? PlayerCharacter->GetAbilitySystemComponent()->GetCurrentMontage()
-		: nullptr;
-	UAnimInstance* AnimInstance = PlayerCharacter->GetMesh() ? PlayerCharacter->GetMesh()->GetAnimInstance() : nullptr;
+	PendingRespawnPlayer = PlayerCharacter;
+	PendingDeathTransform = PlayerCharacter->GetActorTransform();
+	bLastChanceRespawnArmed = true;
+	FreezePlayerForDeathPresentation(PlayerCharacter);
+
 	if (!IsValid(DeathMontage) || !IsValid(AnimInstance))
 	{
-		FTimerHandle RespawnTimerHandle;
-		GetWorldTimerManager().SetTimer(
-			RespawnTimerHandle,
-			FTimerDelegate::CreateUObject(this, &ThisClass::RespawnForLastChance, TWeakObjectPtr<AT_PlayerCharacter>(PlayerCharacter)),
-			RespawnDelayAfterDeathAnimation,
-			false);
+		ArmLastChanceRespawn(PlayerCharacter, RespawnDelayAfterDeathAnimation);
 		return;
 	}
 
-	PendingRespawnPlayer = PlayerCharacter;
 	PendingDeathMontage = DeathMontage;
-	PendingDeathTransform = PlayerCharacter->GetActorTransform();
 	AnimInstance->OnMontageEnded.AddUniqueDynamic(this, &ThisClass::HandlePlayerDeathMontageEnded);
+	ArmLastChanceRespawn(PlayerCharacter, DeathMontage->GetPlayLength() + RespawnDelayAfterDeathAnimation);
 }
 
 void AT_QuestGameMode::HandlePlayerDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	(void)bInterrupted;
 	if (Montage != PendingDeathMontage.Get()) return;
 
 	AT_PlayerCharacter* PlayerCharacter = PendingRespawnPlayer.Get();
-	if (IsValid(PlayerCharacter) && IsValid(PlayerCharacter->GetMesh()) && IsValid(PlayerCharacter->GetMesh()->GetAnimInstance()))
-	{
-		PlayerCharacter->GetMesh()->GetAnimInstance()->OnMontageEnded.RemoveDynamic(this, &ThisClass::HandlePlayerDeathMontageEnded);
-	}
-
-	PendingRespawnPlayer.Reset();
+	UnbindPendingDeathMontage(PlayerCharacter);
 	PendingDeathMontage.Reset();
-	if (!IsValid(PlayerCharacter)) return;
+	if (!IsValid(PlayerCharacter) || !bLastChanceRespawnArmed) return;
 
-	PlayerCharacter->SetAlive(false);
-	PlayerCharacter->SetActorEnableCollision(false);
-	PlayerCharacter->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	PlayerCharacter->SetActorTransform(PendingDeathTransform, false, nullptr, ETeleportType::TeleportPhysics);
+	FreezePlayerForDeathPresentation(PlayerCharacter);
 	if (USkeletalMeshComponent* Mesh = PlayerCharacter->GetMesh()) Mesh->bPauseAnims = true;
-	if (UCharacterMovementComponent* Movement = PlayerCharacter->GetCharacterMovement())
-	{
-		Movement->DisableMovement();
-		Movement->SetComponentTickEnabled(false);
-	}
-	if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(PlayerCharacter->GetController()))
-	{
-		PlayerCharacter->DisableInput(PlayerController);
-		PlayerController->SetIgnoreMoveInput(true);
-		PlayerController->SetIgnoreLookInput(true);
-	}
-
-	FTimerHandle RespawnTimerHandle;
-	GetWorldTimerManager().SetTimer(
-		RespawnTimerHandle,
-		FTimerDelegate::CreateUObject(this, &ThisClass::RespawnForLastChance, TWeakObjectPtr<AT_PlayerCharacter>(PlayerCharacter)),
-		RespawnDelayAfterDeathAnimation,
-		false);
+	ArmLastChanceRespawn(PlayerCharacter, RespawnDelayAfterDeathAnimation);
 }
 
 void AT_QuestGameMode::FinalizeQuestFailure(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter)
@@ -131,7 +111,16 @@ void AT_QuestGameMode::FinalizeQuestFailure(TWeakObjectPtr<AT_PlayerCharacter> P
 
 void AT_QuestGameMode::RespawnForLastChance(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter)
 {
+	if (!bLastChanceRespawnArmed) return;
+	bLastChanceRespawnArmed = false;
+	GetWorldTimerManager().ClearTimer(LastChanceRespawnTimerHandle);
+
 	AT_PlayerCharacter* Character = PlayerCharacter.Get();
+	if (!IsValid(Character)) Character = PendingRespawnPlayer.Get();
+	UnbindPendingDeathMontage(Character);
+	PendingRespawnPlayer.Reset();
+	PendingDeathMontage.Reset();
+
 	AController* Controller = IsValid(Character) ? Character->GetController() : nullptr;
 	if (!IsValid(Character) || !IsValid(Controller)) return;
 
@@ -166,7 +155,8 @@ void AT_QuestGameMode::RespawnForLastChance(TWeakObjectPtr<AT_PlayerCharacter> P
 		Movement->StopMovementImmediately();
 	}
 
-	if (AActor* PlayerStart = FindPlayerStart(Controller))
+	AActor* PlayerStart = FindPlayerStart(Controller);
+	if (IsValid(PlayerStart))
 	{
 		Character->TeleportTo(PlayerStart->GetActorLocation(), PlayerStart->GetActorRotation(), false, true);
 		Controller->SetControlRotation(PlayerStart->GetActorRotation());
@@ -186,4 +176,45 @@ void AT_QuestGameMode::BindPlayerDeath(AT_PlayerCharacter* PlayerCharacter)
 	{
 		PlayerCharacter->OnCharacterDied.AddUniqueDynamic(this, &ThisClass::HandlePlayerDeath);
 	}
+}
+
+void AT_QuestGameMode::FreezePlayerForDeathPresentation(AT_PlayerCharacter* PlayerCharacter)
+{
+	if (!IsValid(PlayerCharacter)) return;
+
+	PlayerCharacter->SetAlive(false);
+	PlayerCharacter->SetActorEnableCollision(false);
+	if (UCapsuleComponent* Capsule = PlayerCharacter->GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	PlayerCharacter->SetActorTransform(PendingDeathTransform, false, nullptr, ETeleportType::TeleportPhysics);
+	if (UCharacterMovementComponent* Movement = PlayerCharacter->GetCharacterMovement())
+	{
+		Movement->DisableMovement();
+		Movement->SetComponentTickEnabled(false);
+	}
+	if (AT_PlayerController* PlayerController = Cast<AT_PlayerController>(PlayerCharacter->GetController()))
+	{
+		PlayerCharacter->DisableInput(PlayerController);
+		PlayerController->SetIgnoreMoveInput(true);
+		PlayerController->SetIgnoreLookInput(true);
+	}
+}
+
+void AT_QuestGameMode::UnbindPendingDeathMontage(AT_PlayerCharacter* PlayerCharacter)
+{
+	if (IsValid(PlayerCharacter) && IsValid(PlayerCharacter->GetMesh()) && IsValid(PlayerCharacter->GetMesh()->GetAnimInstance()))
+	{
+		PlayerCharacter->GetMesh()->GetAnimInstance()->OnMontageEnded.RemoveDynamic(this, &ThisClass::HandlePlayerDeathMontageEnded);
+	}
+}
+
+void AT_QuestGameMode::ArmLastChanceRespawn(AT_PlayerCharacter* PlayerCharacter, float DelaySeconds)
+{
+	GetWorldTimerManager().SetTimer(
+		LastChanceRespawnTimerHandle,
+		FTimerDelegate::CreateUObject(this, &ThisClass::RespawnForLastChance, TWeakObjectPtr<AT_PlayerCharacter>(PlayerCharacter)),
+		FMath::Max(DelaySeconds, 0.05f),
+		false);
 }

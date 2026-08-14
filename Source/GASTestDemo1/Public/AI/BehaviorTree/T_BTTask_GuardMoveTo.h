@@ -59,6 +59,8 @@ private:
 	TWeakObjectPtr<UBehaviorTreeComponent> OwningComponent;
 	FBlackboard::FKey ObservedKeyID;
 	FAIRequestID CurrentMoveRequestID;
+	FVector LastMoveDestination{FVector::ZeroVector};
 	float ElapsedTime{0.f};
 	bool bWaitingForReturnFacing{false};
+	bool bIsStartingMove{false};
 };
