@@ -148,6 +148,8 @@ private:
 	void OpenGameMenu(uint8 MenuMode);
 	void CloseGameMenu();
 	void BindQuestState();
+	void EnsureQuestWidget();
+	void SetQuestWidgetVisible(bool bVisible);
 	void HideLastChance();
 
 	UFUNCTION()

@@ -11,7 +11,6 @@
 #include "EnhancedInputComponent.h"
 #include "Framework/Application/SlateApplication.h"
 #include "InputAction.h"
-#include "Blueprint/UserWidget.h"
 #include "Components/PanelWidget.h"
 #include "Characters/T_BaseCharacter.h"
 #include "Characters/T_PlayerCharacter.h"
@@ -166,22 +165,32 @@ void AT_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void AT_PlayerController::EnsureQuestWidget()
+{
+	if (IsValid(QuestWidget) || !IsValid(QuestWidgetClass)) return;
+	QuestWidget = CreateWidget<UT_QuestWidget>(this, QuestWidgetClass);
+	if (!IsValid(QuestWidget)) return;
+	QuestWidget->AddToViewport(20);
+	QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void AT_PlayerController::SetQuestWidgetVisible(bool bVisible)
+{
+	EnsureQuestWidget();
+	if (!IsValid(QuestWidget)) return;
+	QuestWidget->InitializeQuest(Cast<AT_PlayerCharacter>(GetPawn()));
+	QuestWidget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+}
+
 void AT_PlayerController::ToggleQuestUI()
 {
 	if (IsValid(GameMenuWidget) && GameMenuWidget->IsVisible()) return;
 	AT_QuestGameState* QuestGameState = GetWorld() ? GetWorld()->GetGameState<AT_QuestGameState>() : nullptr;
 	if (!IsValid(QuestGameState) || QuestGameState->GetQuestOutcome() != EQuestOutcome::InProgress || !IsValid(QuestWidgetClass)) return;
 
-	if (!IsValid(QuestWidget))
-	{
-		QuestWidget = CreateWidget<UT_QuestWidget>(this, QuestWidgetClass);
-		if (!IsValid(QuestWidget)) return;
-		QuestWidget->AddToViewport(20);
-		QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	QuestWidget->InitializeQuest(Cast<AT_PlayerCharacter>(GetPawn()));
-	QuestWidget->SetVisibility(QuestWidget->GetVisibility() == ESlateVisibility::Visible
-		? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+	EnsureQuestWidget();
+	if (!IsValid(QuestWidget)) return;
+	SetQuestWidgetVisible(!QuestWidget->IsVisible());
 }
 
 void AT_PlayerController::ToggleGameMenu()
@@ -270,6 +279,10 @@ void AT_PlayerController::HandleQuestStateChanged()
 		if (IsValid(QuestWidget)) QuestWidget->SetVisibility(ESlateVisibility::Collapsed);
 		OpenGameMenu(static_cast<uint8>(ETGameMenuMode::Failure));
 	}
+	else if (BoundQuestGameState->GetQuestOutcome() == EQuestOutcome::InProgress && !IsValid(QuestWidget))
+	{
+		SetQuestWidgetVisible(true);
+	}
 }
 
 void AT_PlayerController::ClientShowLastChance_Implementation()
@@ -305,7 +318,7 @@ void AT_PlayerController::OpenInventory(UT_InventoryComponent* StorageInventory)
 	{
 		InventoryWidget = CreateWidget<UT_InventoryWidget>(this, InventoryWidgetClass);
 		if (!IsValid(InventoryWidget)) return;
-		InventoryWidget->AddToViewport();
+		InventoryWidget->AddToViewport(30);
 	}
 
 	StopAim();
