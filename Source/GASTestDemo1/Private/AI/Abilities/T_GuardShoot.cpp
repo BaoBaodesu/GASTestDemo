@@ -9,8 +9,10 @@
 #include "AI/Abilities/T_GuardAmmoLibrary.h"
 #include "AI/T_ShooterAIController.h"
 #include "AbilitySystem/T_AttributeSet.h"
+#include "Animation/AnimInstance.h"
 #include "Characters/T_GuardCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameObjects/T_PlayerProjectile.h"
 #include "Player/Components/T_ProjectileShooterComponent.h"
@@ -61,6 +63,31 @@ float UT_GuardShoot::GetSpreadHalfAngle(float Distance)
 	if (Distance <= 800.f) return 1.f;
 	if (Distance <= 1600.f) return 2.f;
 	return 3.5f;
+}
+
+void UT_GuardShoot::PrimeShootPresentation(AT_GuardCharacter* Guard)
+{
+	if (!IsValid(Guard) || Guard->GetNetMode() == NM_DedicatedServer) return;
+
+	const UT_GuardShoot* CDO = GetDefault<UT_GuardShoot>();
+	if (!IsValid(CDO)) return;
+
+	if (USkeletalMeshComponent* CharacterMesh = Guard->GetMesh())
+	{
+		if (UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance())
+		{
+			if (IsValid(CDO->FireMontage))
+			{
+				AnimInstance->Montage_Play(CDO->FireMontage);
+				AnimInstance->Montage_Stop(0.f, CDO->FireMontage);
+			}
+		}
+	}
+
+	if (UT_ProjectileShooterComponent* Shooter = Guard->GetProjectileShooterComponent())
+	{
+		Shooter->PrimeFirstShot(CDO->ProjectileClass);
+	}
 }
 
 void UT_GuardShoot::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

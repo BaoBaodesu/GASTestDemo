@@ -7,6 +7,7 @@
 class AT_BaseCharacter;
 class AT_PlayerCharacter;
 class AController;
+class UAnimMontage;
 
 UCLASS()
 class GASTESTDEMO1_API AT_QuestGameMode : public AGameModeBase
@@ -22,7 +23,14 @@ private:
 	UFUNCTION()
 	void HandlePlayerDeath(AT_BaseCharacter* DeadCharacter);
 
+	UFUNCTION()
+	void HandlePlayerDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 	void RespawnForLastChance(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter);
 	void FinalizeQuestFailure(TWeakObjectPtr<AT_PlayerCharacter> PlayerCharacter);
 	void BindPlayerDeath(AT_PlayerCharacter* PlayerCharacter);
+
+	TWeakObjectPtr<AT_PlayerCharacter> PendingRespawnPlayer;
+	TWeakObjectPtr<UAnimMontage> PendingDeathMontage;
+	FTransform PendingDeathTransform;
 };

@@ -53,6 +53,52 @@ void UT_ProjectileShooterComponent::BeginPlay()
 	}
 }
 
+void UT_ProjectileShooterComponent::PrimeFirstShot(TSubclassOf<AT_PlayerProjectile> ProjectileClass)
+{
+	if (GetNetMode() == NM_DedicatedServer) return;
+
+	USkeletalMeshComponent* WeaponMesh = GetOwner() ? GetOwner()->FindComponentByClass<USkeletalMeshComponent>() : nullptr;
+	if (IsValid(WeaponMesh) && IsValid(WeaponFireMontage) && IsValid(WeaponMesh->GetAnimInstance()))
+	{
+		WeaponMesh->GetAnimInstance()->Montage_Play(WeaponFireMontage);
+		WeaponMesh->GetAnimInstance()->Montage_Stop(0.f, WeaponFireMontage);
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World)) return;
+
+	static TWeakObjectPtr<UWorld> PrimedWorld;
+	if (PrimedWorld.Get() == World) return;
+	PrimedWorld = World;
+
+	const FVector WarmupLocation(0.f, 0.f, -100000.f);
+	auto SpawnWarmupFX = [this, WarmupLocation](UNiagaraSystem* System)
+	{
+		if (IsValid(System))
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				this, System, WarmupLocation, FRotator::ZeroRotator, FVector::OneVector, true, true, ENCPoolMethod::AutoRelease, true);
+		}
+	};
+	SpawnWarmupFX(MuzzleSystem);
+	SpawnWarmupFX(TrailSystem);
+	SpawnWarmupFX(ImpactSystem);
+	SpawnWarmupFX(ShellEjectionSystem);
+
+	if (IsValid(ProjectileClass))
+	{
+		AT_PlayerProjectile* Dummy = World->SpawnActorDeferred<AT_PlayerProjectile>(
+			ProjectileClass, FTransform(WarmupLocation), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (IsValid(Dummy))
+		{
+			Dummy->SetActorHiddenInGame(true);
+			Dummy->SetActorEnableCollision(false);
+			UGameplayStatics::FinishSpawningActor(Dummy, FTransform(WarmupLocation));
+			Dummy->Destroy();
+		}
+	}
+}
+
 AT_PlayerProjectile* UT_ProjectileShooterComponent::FireProjectile(const FVector& AimPoint,
 	TSubclassOf<AT_PlayerProjectile> ProjectileClass,
 	TSubclassOf<UGameplayEffect> DamageEffectClass, float Damage, AActor* SourceActor,

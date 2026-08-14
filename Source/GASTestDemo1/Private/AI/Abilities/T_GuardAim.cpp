@@ -119,10 +119,18 @@ UAnimMontage* UT_GuardAim::PrimeAimPose(UAnimInstance* AnimInstance)
 
 void UT_GuardAim::StartAimPoseMontage(AActor* AvatarActor)
 {
-	StopAimPoseMontage(AvatarActor);
-
 	AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(AvatarActor);
 	if (!IsValid(Guard) || !IsValid(AimIdleSequence)) return;
+
+	if (const UAbilitySystemComponent* ASC = Guard->GetAbilitySystemComponent())
+	{
+		if (ASC->HasMatchingGameplayTag(TTags::State::Action::HitReact))
+		{
+			return;
+		}
+	}
+
+	StopAimPoseMontage(AvatarActor);
 
 	USkeletalMeshComponent* CharacterMesh = Guard->GetMesh();
 	UAnimInstance* AnimInstance = IsValid(CharacterMesh) ? CharacterMesh->GetAnimInstance() : nullptr;

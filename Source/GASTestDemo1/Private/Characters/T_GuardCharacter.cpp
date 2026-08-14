@@ -4,6 +4,7 @@
 #include "Characters/T_GuardCharacter.h"
 
 #include "AI/Abilities/T_GuardAim.h"
+#include "AI/Abilities/T_GuardShoot.h"
 #include "AI/T_ShooterAIController.h"
 #include "AbilitySystem/Abilities/Enemy/T_HitReact.h"
 #include "AbilitySystemComponent.h"
@@ -514,6 +515,7 @@ void AT_GuardCharacter::PrimeCombatPresentation()
 		PrimedAimPoseMontage = UT_GuardAim::PrimeAimPose(AnimInstance);
 		if (IsValid(AnimInstance)) bAimPosePrimeAttempted = true;
 	}
+	UT_GuardShoot::PrimeShootPresentation(this);
 }
 
 void AT_GuardCharacter::ApplyWeaponVisibility(bool bShowWeapon)
@@ -778,12 +780,22 @@ void AT_GuardCharacter::PlayHitReactPresentation(AActor* InstigatorActor)
 	{
 		ASC->AddLooseGameplayTag(TTags::State::Action::HitReact);
 	}
+	if (IsValid(ASC))
+	{
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (!Spec.IsActive() || !IsValid(Spec.Ability)) continue;
+			if (Spec.Ability->IsA(UT_GuardAim::StaticClass()))
+			{
+				ASC->CancelAbilityHandle(Spec.Handle);
+			}
+		}
+	}
 
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	UAnimInstance* AnimInstance = IsValid(CharacterMesh) ? CharacterMesh->GetAnimInstance() : nullptr;
 	if (!IsValid(AnimInstance) || !IsValid(HitReactMontage))
 	{
-		// Tag already added; stale timer clears it so shoot still gets interrupted briefly
 		return;
 	}
 
@@ -800,6 +812,14 @@ void AT_GuardCharacter::PlayHitReactPresentation(AActor* InstigatorActor)
 
 void AT_GuardCharacter::OnHitReactMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
+	(void)Montage;
+	(void)bInterrupted;
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	UAnimInstance* AnimInstance = IsValid(CharacterMesh) ? CharacterMesh->GetAnimInstance() : nullptr;
+	if (IsValid(AnimInstance) && IsValid(HitReactMontage) && AnimInstance->Montage_IsPlaying(HitReactMontage))
+	{
+		return;
+	}
 	ClearHitReactPresentation();
 }
 

@@ -15,6 +15,7 @@
 #include "NiagaraSystem.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Characters/T_GuardCharacter.h"
 
 UT_PrimaryComboAbility::UT_PrimaryComboAbility()
 {
@@ -173,6 +174,10 @@ bool UT_PrimaryComboAbility::ApplyComboHitTarget(AActor* HitActor, const FHitRes
 	HitReactPayload.Instigator = AvatarActor;
 	HitReactPayload.Target = HitActor;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(HitActor, TTags::Events::Enemy::HitReact, HitReactPayload);
+	if (AT_GuardCharacter* Guard = Cast<AT_GuardCharacter>(HitActor))
+	{
+		Guard->PlayHitReactPresentation(AvatarActor);
+	}
 
 	return true;
 }

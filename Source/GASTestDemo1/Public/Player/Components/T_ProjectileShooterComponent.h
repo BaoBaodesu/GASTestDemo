@@ -27,6 +27,8 @@ public:
 
 	static FVector ApplySpreadToDirection(const FVector& Direction, float SpreadHalfAngleDegrees);
 
+	void PrimeFirstShot(TSubclassOf<AT_PlayerProjectile> ProjectileClass);
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "T_GuardShoot.generated.h"
 
+class AT_GuardCharacter;
 class AT_PlayerProjectile;
 class UAbilityTask_PlayMontageAndWait;
 class UAbilitySystemComponent;
@@ -35,6 +36,9 @@ public:
 	// 判断标签是否属于射击中断标签（死亡/受击/换弹），供测试复用
 	static bool IsInterruptingTag(const FGameplayTag& Tag);
 	static float GetSpreadHalfAngle(float Distance);
+
+	// 预热首次开火的蒙太奇、Niagara 与投射物，避免进入 Combat 第一枪卡顿
+	static void PrimeShootPresentation(AT_GuardCharacter* Guard);
 
 protected:
 
